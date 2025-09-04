@@ -25,6 +25,7 @@ import {
   ShoppingCart,
   Store,
   People,
+  SmartToy,
 } from '@mui/icons-material';
 
 const DRAWER_WIDTH = 280;
@@ -37,6 +38,7 @@ const Sidebar = () => {
   const [ventasOpen, setVentasOpen] = useState(true);
   const [mercadoLibreOpen, setMercadoLibreOpen] = useState(false);
   const [crmOpen, setCrmOpen] = useState(false);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
 
   const handleDrawerToggle = () => {
     setOpen(!open);
@@ -52,6 +54,10 @@ const Sidebar = () => {
 
   const crmItems = [
     { path: '/crm', label: 'Gestión de Clientes', icon: <People /> },
+  ];
+
+  const chatbotItems = [
+    { path: '/chatbot', label: 'Chatbot', icon: <SmartToy /> },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -183,6 +189,10 @@ const Sidebar = () => {
         <Divider sx={{ my: 1 }} />
         
         {renderSection('CRM', crmItems, crmOpen, setCrmOpen, <People />)}
+
+        <Divider sx={{ my: 1 }} />
+
+        {renderSection('CHATBOT', chatbotItems, chatbotOpen, setChatbotOpen, <SmartToy />)}
       </List>
     </Drawer>
   );

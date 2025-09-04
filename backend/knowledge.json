@@ -1,0 +1,102 @@
+{
+  "topics": {
+    "gestion_stock": {
+      "title": "Gestión de Stock",
+      "keywords": ["stock", "inventario", "faltante", "sobrante", "reposicion", "minimo"],
+      "content": [
+        {
+          "question": "¿Cómo manejar el stock mínimo?",
+          "answer": "Te recomiendo establecer un stock mínimo de 15-30 días de venta promedio para artículos de alta rotación. Para repuestos estacionales, mantén 2-3 meses antes de temporada alta."
+        },
+        {
+          "question": "¿Qué hacer con mercadería sin movimiento?",
+          "answer": "Artículos sin venta en 6+ meses: considera descuentos del 20-30%, promociones por combo, o devolución a proveedor si es posible. El capital inmovilizado te cuesta más que el descuento."
+        }
+      ]
+    },
+    "proveedores": {
+      "title": "Gestión de Proveedores",
+      "keywords": ["proveedor", "compras", "pedidos", "entrega", "calidad", "precios"],
+      "content": [
+        {
+          "question": "¿Cómo evaluar proveedores?",
+          "answer": "Evalúa por: 1) Tiempo de entrega (ideal <7 días), 2) Calidad del producto, 3) Precio competitivo, 4) Condiciones de pago, 5) Servicio post-venta. Un proveedor rápido y confiable vale más que uno 5% más barato."
+        },
+        {
+          "question": "¿Cuántos proveedores tener por artículo?",
+          "answer": "Para artículos críticos, mantén 2-3 proveedores alternativos. Esto te da poder de negociación y evita desabastecimiento. Para artículos de baja rotación, con 1 proveedor confiable alcanza."
+        }
+      ]
+    },
+    "clientes": {
+      "title": "Gestión de Clientes",
+      "keywords": ["cliente", "deuda", "credito", "cobranza", "fidelizacion"],
+      "content": [
+        {
+          "question": "¿Cómo manejar clientes morosos?",
+          "answer": "Establece límites claros: 1) Hasta $50k: 30 días, 2) $50k-200k: 45 días, 3) +$200k: 60 días máximo. Corta el crédito automáticamente al vencer. Un cliente que no paga no es cliente, es un problema."
+        },
+        {
+          "question": "¿Cómo fidelizar clientes?",
+          "answer": "Ofrece: 1) Descuentos por volumen (5-10% por +$100k/mes), 2) Plazos preferenciales a buenos pagadores, 3) Asesoramiento técnico gratuito, 4) Aviso proactivo de ofertas en sus artículos frecuentes."
+        }
+      ]
+    },
+    "precios_margenes": {
+      "title": "Precios y Márgenes",
+      "keywords": ["precio", "margen", "ganancia", "competencia", "descuento"],
+      "content": [
+        {
+          "question": "¿Qué margen aplicar?",
+          "answer": "Márgenes sugeridos: 1) Repuestos comunes: 35-50%, 2) Artículos especializados: 50-80%, 3) Aceites/filtros: 25-35%, 4) Accesorios: 40-60%. Ajusta según competencia local y rotación."
+        },
+        {
+          "question": "¿Cuándo hacer descuentos?",
+          "answer": "Descuentos estratégicos: 1) Por volumen: 5-15% según cantidad, 2) Por pronto pago: 3-5%, 3) Por fidelidad: hasta 10%, 4) Para liquidar stock viejo: 20-40%. Nunca bajes de tu costo + gastos fijos."
+        }
+      ]
+    },
+    "estacionalidad": {
+      "title": "Estacionalidad del Negocio",
+      "keywords": ["temporada", "estacional", "verano", "invierno", "planificacion"],
+      "content": [
+        {
+          "question": "¿Cómo prepararse para temporadas?",
+          "answer": "Verano: aumenta stock de refrigeración (radiadores, ventiladores, A/C) desde octubre. Invierno: calefacción, bujías, baterías desde marzo. Planifica compras con 60-90 días de anticipación."
+        },
+        {
+          "question": "¿Qué hacer en temporada baja?",
+          "answer": "Aprovecha para: 1) Organizar inventario, 2) Capacitarte en nuevos productos, 3) Mejorar relación con proveedores, 4) Planificar próxima temporada, 5) Hacer mantenimiento del local."
+        }
+      ]
+    },
+    "tecnologia": {
+      "title": "Tecnología y Sistemas",
+      "keywords": ["sistema", "software", "digitalizacion", "codigo", "catalogo"],
+      "content": [
+        {
+          "question": "¿Por qué usar un sistema como Boxer?",
+          "answer": "Un buen sistema te da: 1) Control real de stock, 2) Historial de ventas para planificar, 3) Control de cuentas corrientes, 4) Reportes para tomar decisiones, 5) Ahorro de tiempo en tareas administrativas. La inversión se paga sola en 2-3 meses."
+        },
+        {
+          "question": "¿Cómo organizar el catálogo?",
+          "answer": "Usa códigos consistentes: marca + tipo + modelo. Ej: 'BOSCHFiltroAire-VW-Golf'. Incluye siempre: aplicación, marca, medidas críticas. Un catálogo ordenado reduce errores y acelera ventas."
+        }
+      ]
+    }
+  },
+  "frequent_answers": [
+    {
+      "keywords": ["horarios", "atencion", "abierto"],
+      "answer": "Los horarios típicos de repuesteras son L-V 8-18hs, Sábados 8-13hs. Considera extender hasta 19hs en días de semana para captar clientes que trabajan."
+    },
+    {
+      "keywords": ["competencia", "precios"],
+      "answer": "No compitas solo por precio. Diferénciate con: servicio rápido, asesoramiento técnico, garantía, stock disponible, y relación personal. Un cliente satisfecho paga 10-15% más sin problemas."
+    },
+    {
+      "keywords": ["crecimiento", "expansion"],
+      "answer": "Para crecer: 1) Consolida tu negocio actual primero, 2) Especialízate en 2-3 marcas/tipos, 3) Mejora tu capital de trabajo, 4) Considera venta online, 5) Evalúa sucursal solo con flujo positivo constante."
+    }
+  ]
+}

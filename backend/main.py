@@ -6,15 +6,14 @@ import uvicorn
 from datetime import datetime
 from database import SessionLocal, engine, Base
 from models import Base as ModelsBase
-from models import Product, Sale, Customer, SaleItem, Quote, Return, ReturnItem, ExchangeItem
+from models import Product, Sale, Customer, SaleItem, Quote, QuoteItem
+from models import ChatConversation, ChatMessage, TestUsuario, TestCliente, TestProveedor, TestArticulo
 from schemas import ProductResponse, ProductSearch, SaleCreate, CustomerCreate
 from fuzzywuzzy import fuzz, process
 from api_routes import router as api_router
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
-from models import ChatConversation
-from models import TestProveedor, TestCliente, TestArticulo, TestUsuario
 
 # Load environment variables from .env if present
 load_dotenv()

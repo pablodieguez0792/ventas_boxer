@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
 import Sidebar from './components/Sidebar';
 import ChatbotWidget from './components/ChatbotWidget';
+import ChatbotContainer from './pages/ChatbotContainer';
 import VentasContainer from './pages/VentasContainer';
 import MercadoLibreContainer from './pages/MercadoLibreContainer';
 import CRMContainer from './pages/CRMContainer';
@@ -75,6 +76,7 @@ function App() {
                 <Route path="/ventas/*" element={<VentasContainer />} />
                 <Route path="/mercadolibre/*" element={<MercadoLibreContainer />} />
                 <Route path="/crm/*" element={<CRMContainer />} />
+                <Route path="/chatbot/*" element={<ChatbotContainer />} />
                 <Route path="/" element={<VentasContainer />} />
               </Routes>
               {/* Global floating chatbot */}
