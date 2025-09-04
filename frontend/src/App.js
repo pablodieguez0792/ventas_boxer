@@ -6,6 +6,8 @@ import { Box } from '@mui/material';
 import Sidebar from './components/Sidebar';
 import ChatbotWidget from './components/ChatbotWidget';
 import ChatbotContainer from './pages/ChatbotContainer';
+import RuralSantaFe from './pages/conexiones/RuralSantaFe';
+import Promotive from './pages/conexiones/Promotive';
 import VentasContainer from './pages/VentasContainer';
 import MercadoLibreContainer from './pages/MercadoLibreContainer';
 import CRMContainer from './pages/CRMContainer';
@@ -77,6 +79,8 @@ function App() {
                 <Route path="/mercadolibre/*" element={<MercadoLibreContainer />} />
                 <Route path="/crm/*" element={<CRMContainer />} />
                 <Route path="/chatbot/*" element={<ChatbotContainer />} />
+                <Route path="/conexiones-api/rural-santa-fe" element={<RuralSantaFe />} />
+                <Route path="/conexiones-api/promotive" element={<Promotive />} />
                 <Route path="/" element={<VentasContainer />} />
               </Routes>
               {/* Global floating chatbot */}

@@ -9,20 +9,19 @@ from models import (
     QuoteItem,
     Customer,
     ChatConversation,
-    ChatMessage,
-    TestUsuario,
-    TestCliente,
-    TestProveedor,
-    TestArticulo,
+    ChatMessage
 )
-from schemas import SaleCreate, QuoteCreate
-from datetime import datetime, timedelta
 import json
 import os
-import random
-from logger import log_event
-from knowledge_manager import knowledge_manager
+from datetime import datetime, timedelta
+import logging
+from logger import get_logger
+from knowledge_manager import KnowledgeManager
+import openai
+from fuzzywuzzy import fuzz
 import re
+import ipaddress
+# from rsf_routes import router as rsf_router  # Removed to avoid circular import
 
 try:
     # Optional OpenAI integration

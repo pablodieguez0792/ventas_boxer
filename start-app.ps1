@@ -1,5 +1,3 @@
-#!/usr/bin/env powershell
-
 # POS Autopartes - Startup Script
 # Este script inicia tanto el backend como el frontend automáticamente
 
@@ -54,8 +52,12 @@ if (-not (Test-Path $frontendPath)) {
 
 Write-Host "📁 Carpetas encontradas correctamente" -ForegroundColor Green
 
+# Inicializar variables de jobs
+$backendJob = $null
+$frontendJob = $null
+
 # Función para iniciar el backend
-Write-Host "🔧 Iniciando Backend (API)..." -ForegroundColor Yellow
+Write-Host "🔧 Iniciando Backend..." -ForegroundColor Yellow
 $backendJob = Start-Job -ScriptBlock {
     param($path)
     Set-Location $path
@@ -84,13 +86,15 @@ while (-not $backendStarted -and $attempts -lt 10) {
 
 if (-not $backendStarted) {
     Write-Host "❌ Error: El backend no se pudo iniciar correctamente" -ForegroundColor Red
-    Stop-Job $backendJob
-    Remove-Job $backendJob
+    if ($backendJob) {
+        Stop-Job $backendJob -ErrorAction SilentlyContinue
+        Remove-Job $backendJob -ErrorAction SilentlyContinue
+    }
     exit 1
 }
 
 # Función para iniciar el frontend
-Write-Host "🎨 Iniciando Frontend (React)..." -ForegroundColor Yellow
+Write-Host "🎨 Iniciando Frontend..." -ForegroundColor Yellow
 $frontendJob = Start-Job -ScriptBlock {
     param($path)
     Set-Location $path
@@ -136,10 +140,14 @@ catch {
 }
 finally {
     # Limpiar jobs al salir
-    Stop-Job $backendJob -ErrorAction SilentlyContinue
-    Stop-Job $frontendJob -ErrorAction SilentlyContinue
-    Remove-Job $backendJob -ErrorAction SilentlyContinue
-    Remove-Job $frontendJob -ErrorAction SilentlyContinue
+    if ($backendJob) {
+        Stop-Job $backendJob -ErrorAction SilentlyContinue
+        Remove-Job $backendJob -ErrorAction SilentlyContinue
+    }
+    if ($frontendJob) {
+        Stop-Job $frontendJob -ErrorAction SilentlyContinue
+        Remove-Job $frontendJob -ErrorAction SilentlyContinue
+    }
     
     Write-Host "🛑 POS Autopartes detenido" -ForegroundColor Red
 }

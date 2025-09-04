@@ -26,6 +26,9 @@ import {
   Store,
   People,
   SmartToy,
+  Api,
+  Agriculture,
+  Business,
 } from '@mui/icons-material';
 
 const DRAWER_WIDTH = 280;
@@ -39,6 +42,7 @@ const Sidebar = () => {
   const [mercadoLibreOpen, setMercadoLibreOpen] = useState(false);
   const [crmOpen, setCrmOpen] = useState(false);
   const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [conexionesApiOpen, setConexionesApiOpen] = useState(false);
 
   const handleDrawerToggle = () => {
     setOpen(!open);
@@ -58,6 +62,11 @@ const Sidebar = () => {
 
   const chatbotItems = [
     { path: '/chatbot', label: 'Chatbot', icon: <SmartToy /> },
+  ];
+
+  const conexionesApiItems = [
+    { path: '/conexiones-api/rural-santa-fe', label: 'Rural Santa Fe', icon: <Agriculture /> },
+    { path: '/conexiones-api/promotive', label: 'Promotive', icon: <Business /> },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -193,6 +202,10 @@ const Sidebar = () => {
         <Divider sx={{ my: 1 }} />
 
         {renderSection('CHATBOT', chatbotItems, chatbotOpen, setChatbotOpen, <SmartToy />)}
+
+        <Divider sx={{ my: 1 }} />
+
+        {renderSection('CONEXIONES API', conexionesApiItems, conexionesApiOpen, setConexionesApiOpen, <Api />)}
       </List>
     </Drawer>
   );

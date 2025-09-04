@@ -28,3 +28,7 @@ def log_event(event: dict):
     except Exception:
         # Never crash on logging errors
         pass
+
+def get_logger():
+    """Get the chatbot logger instance."""
+    return logger

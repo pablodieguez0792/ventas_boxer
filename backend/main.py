@@ -11,6 +11,7 @@ from models import ChatConversation, ChatMessage, TestUsuario, TestCliente, Test
 from schemas import ProductResponse, ProductSearch, SaleCreate, CustomerCreate
 from fuzzywuzzy import fuzz, process
 from api_routes import router as api_router
+from rsf_routes import router as rsf_router
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
@@ -119,6 +120,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Include API routes
 app.include_router(api_router)
+app.include_router(rsf_router)
 
 # Dependency to get database session
 def get_db():
