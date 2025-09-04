@@ -1,4 +1,4 @@
-﻿node_modules/
+node_modules/
 frontend/node_modules/
 dist/
 build/
@@ -11,3 +11,15 @@ Thumbs.db
 frontend/node_modules/
 frontend/node_modules/
 frontend/node_modules/
+# Archivos de Excel temporales
+~$*.xlsx
+~$*.xls
+
+# Ignorar directorio duplicado ventas_boxer
+ventas_boxer/
+
+# Archivos grandes
+*.rar
+*.zip
+*.tar.gz
+*.7z
