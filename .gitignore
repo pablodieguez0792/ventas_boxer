@@ -23,3 +23,25 @@ ventas_boxer/
 *.zip
 *.tar.gz
 *.7z
+
+# Entornos virtuales de Python
+.venv/
+venv/
+env/
+ENV/
+.env/
+backend/.venv/
+
+# Archivos de Python
+__pycache__/
+backend/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+pos_autopartes.db
+frontend/package-lock.json
