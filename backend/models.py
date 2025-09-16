@@ -98,8 +98,34 @@ class Configuration(Base):
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String, unique=True, nullable=False, index=True)
     value = Column(Text, nullable=False)
+
+
+class ChatbotSection(Base):
+    __tablename__ = "chatbot_sections"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False, index=True)  # ventas, cuentas, compras, etc.
+    display_name = Column(String, nullable=False)
+    description = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    questions = relationship("ChatbotQuestion", back_populates="section", cascade="all, delete-orphan")
+
+
+class ChatbotQuestion(Base):
+    __tablename__ = "chatbot_questions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    section_id = Column(Integer, ForeignKey("chatbot_sections.id"), nullable=False, index=True)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    observations = Column(Text)  # New field for observations
+    order_index = Column(Integer, default=0)  # For ordering questions
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    section = relationship("ChatbotSection", back_populates="questions")
 
 class Product(Base):
     __tablename__ = "products"
@@ -209,3 +235,41 @@ class QuoteItem(Base):
     # Relationships
     quote = relationship("Quote", back_populates="quote_items")
     product = relationship("Product")
+
+
+class RSFOrder(Base):
+    __tablename__ = "rsf_orders"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(String, unique=True, nullable=False, index=True)  # ID de la orden en RSF
+    transaction_id = Column(String, unique=True, nullable=False, index=True)  # ID de transacción
+    cuenta_rsf = Column(String, nullable=False)
+    estado = Column(String, default="Pendiente")  # Pendiente, Confirmado, Entregado, Cancelado
+    total = Column(Float, nullable=False)
+    comentario = Column(Text)
+    email = Column(String)
+    test = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    order_items = relationship("RSFOrderItem", back_populates="order", cascade="all, delete-orphan")
+
+
+class RSFOrderItem(Base):
+    __tablename__ = "rsf_order_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("rsf_orders.id"), nullable=False)
+    codigo_rsf = Column(String, nullable=False)
+    articulo = Column(String, nullable=False)
+    descripcion = Column(String)
+    marca_rsf = Column(String)
+    marca_original = Column(String)
+    fabrica = Column(String)
+    cantidad = Column(Integer, nullable=False)
+    precio_unitario = Column(Float, nullable=False)
+    subtotal = Column(Float, nullable=False)
+    
+    # Relationships
+    order = relationship("RSFOrder", back_populates="order_items")

@@ -4,8 +4,10 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
 import Sidebar from './components/Sidebar';
-import ChatbotWidget from './components/ChatbotWidget';
 import ChatbotContainer from './pages/ChatbotContainer';
+import ChatbotSections from './pages/ChatbotSections';
+import ChatbotSection from './pages/ChatbotSection';
+import ChatbotModulos from './pages/ChatbotModulos';
 import RuralSantaFe from './pages/conexiones/RuralSantaFe';
 import Promotive from './pages/conexiones/Promotive';
 import VentasContainer from './pages/VentasContainer';
@@ -78,13 +80,14 @@ function App() {
                 <Route path="/ventas/*" element={<VentasContainer />} />
                 <Route path="/mercadolibre/*" element={<MercadoLibreContainer />} />
                 <Route path="/crm/*" element={<CRMContainer />} />
-                <Route path="/chatbot/*" element={<ChatbotContainer />} />
+                <Route path="/chatbot" element={<ChatbotModulos />} />
+                <Route path="/chatbot/original" element={<ChatbotContainer />} />
+                <Route path="/chatbot/modulos" element={<ChatbotModulos />} />
+                <Route path="/chatbot/:sectionName" element={<ChatbotSection />} />
                 <Route path="/conexiones-api/rural-santa-fe" element={<RuralSantaFe />} />
                 <Route path="/conexiones-api/promotive" element={<Promotive />} />
                 <Route path="/" element={<VentasContainer />} />
               </Routes>
-              {/* Global floating chatbot */}
-              <ChatbotWidget />
             </Box>
           </Box>
         </Router>

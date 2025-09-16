@@ -9,7 +9,9 @@ from models import (
     QuoteItem,
     Customer,
     ChatConversation,
-    ChatMessage
+    ChatMessage,
+    ChatbotSection,
+    ChatbotQuestion
 )
 import json
 import os
@@ -1050,3 +1052,129 @@ def _anonymize_text(text: str) -> str:
     text = re.sub(r'\b\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b', '***-***-****', text)
     
     return text
+
+
+# ============== CHATBOT SECTIONS & QUESTIONS API ==============
+
+@router.get("/api/chatbot/sections")
+def get_chatbot_sections(db: Session = Depends(get_db)):
+    """Get all chatbot sections with their questions."""
+    sections = db.query(ChatbotSection).order_by(ChatbotSection.name).all()
+    result = []
+    for section in sections:
+        questions = db.query(ChatbotQuestion).filter(
+            ChatbotQuestion.section_id == section.id,
+            ChatbotQuestion.is_active == True
+        ).order_by(ChatbotQuestion.order_index).all()
+        
+        result.append({
+            "id": section.id,
+            "name": section.name,
+            "display_name": section.display_name,
+            "description": section.description,
+            "questions": [{
+                "id": q.id,
+                "question": q.question,
+                "answer": q.answer,
+                "observations": q.observations,
+                "order_index": q.order_index
+            } for q in questions]
+        })
+    return result
+
+
+@router.post("/api/chatbot/sections/{section_name}/questions")
+def create_question(section_name: str, question_data: dict, db: Session = Depends(get_db)):
+    """Create a new question for a specific chatbot section."""
+    section = db.query(ChatbotSection).filter(ChatbotSection.name == section_name).first()
+    if not section:
+        raise HTTPException(status_code=404, detail="Section not found")
+    
+    # Get the next order index
+    max_order = db.query(ChatbotQuestion).filter(
+        ChatbotQuestion.section_id == section.id
+    ).count()
+    
+    question = ChatbotQuestion(
+        section_id=section.id,
+        question=question_data.get("question", ""),
+        answer=question_data.get("answer", ""),
+        observations=question_data.get("observations", ""),
+        order_index=max_order + 1
+    )
+    
+    db.add(question)
+    db.commit()
+    db.refresh(question)
+    
+    return {
+        "id": question.id,
+        "question": question.question,
+        "answer": question.answer,
+        "order_index": question.order_index
+    }
+
+
+@router.put("/api/chatbot/questions/{question_id}")
+def update_question(question_id: int, question_data: dict, db: Session = Depends(get_db)):
+    """Update an existing question."""
+    question = db.query(ChatbotQuestion).filter(ChatbotQuestion.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    if "question" in question_data:
+        question.question = question_data["question"]
+    if "answer" in question_data:
+        question.answer = question_data["answer"]
+    if "observations" in question_data:
+        question.observations = question_data["observations"]
+    
+    db.commit()
+    db.refresh(question)
+    
+    return {
+        "id": question.id,
+        "question": question.question,
+        "answer": question.answer,
+        "observations": question.observations,
+        "order_index": question.order_index
+    }
+
+
+@router.delete("/api/chatbot/questions/{question_id}")
+def delete_question(question_id: int, db: Session = Depends(get_db)):
+    """Delete a question."""
+    question = db.query(ChatbotQuestion).filter(ChatbotQuestion.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    db.delete(question)
+    db.commit()
+    
+    return {"message": "Question deleted successfully"}
+
+
+@router.post("/api/chatbot/sections/initialize")
+def initialize_chatbot_sections(db: Session = Depends(get_db)):
+    """Initialize default chatbot sections."""
+    sections_data = [
+        {"name": "ventas", "display_name": "Ventas", "description": "Gestión de ventas y facturación"},
+        {"name": "cuentas", "display_name": "Cuentas", "description": "Gestión de cuentas corrientes y pagos"},
+        {"name": "compras", "display_name": "Compras", "description": "Gestión de compras y proveedores"},
+        {"name": "clientes", "display_name": "Clientes", "description": "Gestión de clientes y relaciones comerciales"},
+        {"name": "proveedores", "display_name": "Proveedores", "description": "Gestión de proveedores y suministros"},
+        {"name": "articulos", "display_name": "Artículos", "description": "Gestión de inventario y productos"},
+        {"name": "mercadolibre", "display_name": "MercadoLibre", "description": "Integración con MercadoLibre"}
+    ]
+    
+    created_sections = []
+    for section_data in sections_data:
+        existing = db.query(ChatbotSection).filter(ChatbotSection.name == section_data["name"]).first()
+        if not existing:
+            section = ChatbotSection(**section_data)
+            db.add(section)
+            created_sections.append(section_data["name"])
+    
+    db.commit()
+    
+    return {"message": f"Initialized {len(created_sections)} sections", "sections": created_sections}

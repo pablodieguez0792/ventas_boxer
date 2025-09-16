@@ -285,9 +285,9 @@ async def get_rsf_discounts():
         }
 
 @router.post("/orders")
-async def send_rsf_order(request: RSFOrderRequest):
+async def send_rsf_order(request: RSFOrderRequest, db: Session = Depends(lambda: None)):
     """
-    Envía un pedido a Rural Santa Fe
+    Envía un pedido a Rural Santa Fe y lo guarda en la base de datos local
     """
     try:
         # Convertir productos del request
@@ -310,6 +310,60 @@ async def send_rsf_order(request: RSFOrderRequest):
             comentario=request.comentario,
             email=request.email
         )
+        
+        # Guardar orden en base de datos local si el envío fue exitoso
+        if result and "trasaccion" in result:
+            try:
+                from sqlalchemy import create_engine
+                from sqlalchemy.orm import sessionmaker
+                from models import RSFOrder, RSFOrderItem
+                
+                engine = create_engine('sqlite:///publicaciones.db')
+                SessionLocal = sessionmaker(bind=engine)
+                local_db = SessionLocal()
+                
+                # Calcular total
+                total = sum(p.cantidad * (p.precio_unitario if hasattr(p, 'precio_unitario') else 0) for p in rsf_products)
+                
+                # Crear orden
+                new_order = RSFOrder(
+                    order_id=f"RSF-{result['trasaccion'][:8]}-2025",
+                    transaction_id=result['trasaccion'],
+                    cuenta_rsf=result.get('cuenta', ''),
+                    estado="Pendiente",
+                    total=total,
+                    comentario=request.comentario,
+                    email=request.email,
+                    test=request.test
+                )
+                
+                local_db.add(new_order)
+                local_db.flush()  # Para obtener el ID
+                
+                # Crear items de la orden
+                for product_req in request.products:
+                    order_item = RSFOrderItem(
+                        order_id=new_order.id,
+                        codigo_rsf=product_req.codigo_rsf or '',
+                        articulo=product_req.articulo or '',
+                        descripcion=f"Producto {product_req.articulo}",
+                        marca_rsf=product_req.marca_rsf or '',
+                        marca_original=product_req.marca_original or '',
+                        fabrica=product_req.fabrica or '',
+                        cantidad=product_req.cantidad,
+                        precio_unitario=0.0,  # Se actualizará cuando tengamos el precio real
+                        subtotal=0.0
+                    )
+                    local_db.add(order_item)
+                
+                local_db.commit()
+                local_db.close()
+                
+                logger.info(f"Orden guardada en BD local: {new_order.order_id}")
+                
+            except Exception as db_error:
+                logger.error(f"Error guardando orden en BD local: {db_error}")
+                # No fallar el endpoint por error de BD local
         
         return {
             "success": True,
@@ -431,132 +485,66 @@ async def get_rsf_orders():
 @router.get("/orders-history")
 async def get_rsf_orders_history():
     """
-    Obtiene el historial de órdenes/pedidos de RSF (alias para compatibilidad con frontend)
+    Obtiene el historial de órdenes/pedidos de RSF desde la base de datos local
     """
     try:
-        # Simular algunas órdenes de ejemplo con detalles de productos
-        # En el futuro, esto se conectaría a una base de datos local
-        sample_orders = [
-            {
-                "id": "RSF-001-2024",
-                "fecha": "2024-01-15T10:30:00",
-                "estado": "Confirmado",
-                "total": 125750.50,
-                "productos_count": 15,
-                "comentario": "Pedido urgente - repuestos motor",
-                "test": False,
-                "productos": [
-                    {
-                        "codigo_rsf": "RSF001234",
-                        "articulo": "FILTRO ACEITE",
-                        "descripcion": "Filtro de aceite motor 1.6L",
-                        "marca_rsf": "MANN",
-                        "marca_original": "MANN-FILTER",
-                        "cantidad": 5,
-                        "precio_unitario": 2850.50,
-                        "subtotal": 14252.50
-                    },
-                    {
-                        "codigo_rsf": "RSF005678",
-                        "articulo": "PASTILLAS FRENO",
-                        "descripcion": "Pastillas freno delanteras ceramicas",
-                        "marca_rsf": "BOSCH",
-                        "marca_original": "BOSCH",
-                        "cantidad": 2,
-                        "precio_unitario": 18500.00,
-                        "subtotal": 37000.00
-                    },
-                    {
-                        "codigo_rsf": "RSF009876",
-                        "articulo": "AMORTIGUADOR",
-                        "descripcion": "Amortiguador delantero derecho",
-                        "marca_rsf": "MONROE",
-                        "marca_original": "MONROE",
-                        "cantidad": 1,
-                        "precio_unitario": 45200.00,
-                        "subtotal": 45200.00
-                    }
-                ]
-            },
-            {
-                "id": "RSF-002-2024", 
-                "fecha": "2024-01-10T14:45:00",
-                "estado": "Pendiente",
-                "total": 89320.25,
-                "productos_count": 8,
-                "comentario": "Pedido regular",
-                "test": True,
-                "productos": [
-                    {
-                        "codigo_rsf": "RSF002468",
-                        "articulo": "BUJIA",
-                        "descripcion": "Bujia encendido iridio",
-                        "marca_rsf": "NGK",
-                        "marca_original": "NGK",
-                        "cantidad": 4,
-                        "precio_unitario": 3200.00,
-                        "subtotal": 12800.00
-                    },
-                    {
-                        "codigo_rsf": "RSF013579",
-                        "articulo": "CORREA DISTRIBUCION",
-                        "descripcion": "Kit correa distribución completo",
-                        "marca_rsf": "GATES",
-                        "marca_original": "GATES",
-                        "cantidad": 1,
-                        "precio_unitario": 28500.00,
-                        "subtotal": 28500.00
-                    }
-                ]
-            },
-            {
-                "id": "RSF-003-2024",
-                "fecha": "2024-01-05T09:15:00", 
-                "estado": "Entregado",
-                "total": 234150.75,
-                "productos_count": 22,
-                "comentario": "Pedido mayorista",
-                "test": False,
-                "productos": [
-                    {
-                        "codigo_rsf": "RSF024681",
-                        "articulo": "ACEITE MOTOR",
-                        "descripcion": "Aceite motor sintetico 5W30 4L",
-                        "marca_rsf": "CASTROL",
-                        "marca_original": "CASTROL",
-                        "cantidad": 10,
-                        "precio_unitario": 8500.00,
-                        "subtotal": 85000.00
-                    },
-                    {
-                        "codigo_rsf": "RSF135792",
-                        "articulo": "NEUMATICO",
-                        "descripcion": "Neumatico 185/65 R15",
-                        "marca_rsf": "BRIDGESTONE",
-                        "marca_original": "BRIDGESTONE",
-                        "cantidad": 4,
-                        "precio_unitario": 25600.00,
-                        "subtotal": 102400.00
-                    },
-                    {
-                        "codigo_rsf": "RSF246810",
-                        "articulo": "BATERIA",
-                        "descripcion": "Bateria 12V 65Ah libre mantenimiento",
-                        "marca_rsf": "MOURA",
-                        "marca_original": "MOURA",
-                        "cantidad": 1,
-                        "precio_unitario": 35500.00,
-                        "subtotal": 35500.00
-                    }
-                ]
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from models import RSFOrder, RSFOrderItem
+        
+        engine = create_engine('sqlite:///publicaciones.db')
+        SessionLocal = sessionmaker(bind=engine)
+        db = SessionLocal()
+        
+        # Obtener órdenes de la base de datos
+        orders = db.query(RSFOrder).order_by(RSFOrder.created_at.desc()).all()
+        
+        orders_data = []
+        for order in orders:
+            # Obtener items de la orden
+            order_items = db.query(RSFOrderItem).filter(RSFOrderItem.order_id == order.id).all()
+            
+            productos = []
+            for item in order_items:
+                productos.append({
+                    "codigo_rsf": item.codigo_rsf,
+                    "articulo": item.articulo,
+                    "descripcion": item.descripcion,
+                    "marca_rsf": item.marca_rsf,
+                    "marca_original": item.marca_original,
+                    "cantidad": item.cantidad,
+                    "precio_unitario": item.precio_unitario,
+                    "subtotal": item.subtotal
+                })
+            
+            order_data = {
+                "id": order.order_id,
+                "fecha": order.created_at.isoformat(),
+                "estado": order.estado,
+                "total": order.total,
+                "productos_count": len(productos),
+                "comentario": order.comentario,
+                "test": order.test,
+                "productos": productos
             }
-        ]
+            orders_data.append(order_data)
+        
+        db.close()
+        
+        # Si no hay órdenes reales, mostrar mensaje informativo
+        if not orders_data:
+            return {
+                "success": True,
+                "total": 0,
+                "data": [],
+                "message": "No hay órdenes registradas. Las órdenes aparecerán aquí cuando se envíen pedidos a RSF."
+            }
         
         return {
             "success": True,
-            "total": len(sample_orders),
-            "data": sample_orders,
-            "message": "Datos de ejemplo - En desarrollo: integración con base de datos local"
+            "total": len(orders_data),
+            "data": orders_data,
+            "message": f"Historial de órdenes RSF ({len(orders_data)} órdenes encontradas)"
         }
         
     except Exception as e:

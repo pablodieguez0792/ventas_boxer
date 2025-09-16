@@ -207,11 +207,11 @@ export default function ChatbotContainer() {
                     primary={c.title} 
                     secondary={
                       <React.Fragment>
-                        <Typography variant="caption" component="div">
+                        <Typography variant="caption" component="span">
                           {c.message_count} mensajes • {new Date(c.last_activity_at).toLocaleString()}
                         </Typography>
                         {c.client_cuit && (
-                          <Typography variant="caption" component="div" sx={{ color: 'primary.main' }}>
+                          <Typography variant="caption" component="span" sx={{ color: 'primary.main', display: 'block' }}>
                             CUIT: {c.client_cuit}
                           </Typography>
                         )}

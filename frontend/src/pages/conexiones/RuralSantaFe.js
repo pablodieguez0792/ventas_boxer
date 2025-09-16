@@ -76,6 +76,8 @@ const RuralSantaFe = () => {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingExport, setLoadingExport] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState(new Set());
+  const [expandedDocuments, setExpandedDocuments] = useState(new Set());
+  const [documentDetails, setDocumentDetails] = useState({});
   
   // Filtros de productos
   const [filterMarca, setFilterMarca] = useState('');
@@ -333,6 +335,31 @@ const RuralSantaFe = () => {
       newExpanded.add(orderId);
     }
     setExpandedOrders(newExpanded);
+  };
+
+  const toggleDocumentExpansion = async (docNumber) => {
+    const newExpanded = new Set(expandedDocuments);
+    if (newExpanded.has(docNumber)) {
+      newExpanded.delete(docNumber);
+    } else {
+      newExpanded.add(docNumber);
+      // Cargar detalles del documento si no los tenemos
+      if (!documentDetails[docNumber]) {
+        try {
+          const response = await fetch(`/api/rsf/documents/${docNumber}`);
+          const data = await response.json();
+          if (data.success) {
+            setDocumentDetails(prev => ({
+              ...prev,
+              [docNumber]: data.data
+            }));
+          }
+        } catch (error) {
+          console.error('Error cargando detalles del documento:', error);
+        }
+      }
+    }
+    setExpandedDocuments(newExpanded);
   };
 
   const checkConnectionStatus = async () => {
@@ -763,6 +790,7 @@ const RuralSantaFe = () => {
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
+                        <TableCell>Acciones</TableCell>
                         <TableCell>Número</TableCell>
                         <TableCell>Fecha</TableCell>
                         <TableCell>Tipo</TableCell>
@@ -776,48 +804,229 @@ const RuralSantaFe = () => {
                     </TableHead>
                     <TableBody>
                       {documents.map((doc, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <Typography variant="caption" fontFamily="monospace">
-                              {doc.numero}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{doc.fecha ? new Date(doc.fecha).toLocaleDateString() : 'N/A'}</TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={doc.tipo_descripcion || doc.tipo} 
-                              color={doc.tipo === 'FC' ? 'success' : doc.tipo === 'NC' ? 'warning' : 'info'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell align="right">${doc.subtotal?.toFixed(2) || '0.00'}</TableCell>
-                          <TableCell align="right">${doc.iva?.toFixed(2) || '0.00'}</TableCell>
-                          <TableCell align="right">
-                            <Typography variant="body2" fontWeight="bold">
-                              ${doc.total?.toFixed(2) || '0.00'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography 
-                              variant="body2" 
-                              color={doc.saldo > 0 ? 'warning.main' : 'success.main'}
-                            >
-                              ${doc.saldo?.toFixed(2) || '0.00'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={doc.estado || 'Procesado'} 
-                              color={doc.saldo > 0 ? 'warning' : 'success'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="caption">
-                              {doc.codigo_arca || 'N/A'}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
+                        <React.Fragment key={index}>
+                          <TableRow>
+                            <TableCell>
+                              <IconButton 
+                                size="small" 
+                                onClick={() => toggleDocumentExpansion(doc.numero)}
+                                color="primary"
+                              >
+                                {expandedDocuments.has(doc.numero) ? <ExpandLess /> : <ExpandMore />}
+                              </IconButton>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="caption" fontFamily="monospace">
+                                {doc.numero}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>{doc.fecha ? new Date(doc.fecha).toLocaleDateString() : 'N/A'}</TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={doc.tipo_descripcion || doc.tipo} 
+                                color={doc.tipo === 'FC' ? 'success' : doc.tipo === 'NC' ? 'warning' : 'info'}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell align="right">${doc.subtotal?.toFixed(2) || '0.00'}</TableCell>
+                            <TableCell align="right">${doc.iva?.toFixed(2) || '0.00'}</TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2" fontWeight="bold">
+                                ${doc.total?.toFixed(2) || '0.00'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography 
+                                variant="body2" 
+                                color={doc.saldo > 0 ? 'warning.main' : 'success.main'}
+                              >
+                                ${doc.saldo?.toFixed(2) || '0.00'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={doc.estado || 'Procesado'} 
+                                color={doc.saldo > 0 ? 'warning' : 'success'}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="caption">
+                                {doc.codigo_arca || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                          {expandedDocuments.has(doc.numero) && (
+                            <TableRow>
+                              <TableCell colSpan={10} sx={{ py: 0 }}>
+                                <Box sx={{ margin: 2 }}>
+                                  <Typography variant="subtitle2" gutterBottom>
+                                    Detalles del Documento: {doc.numero}
+                                  </Typography>
+                                  
+                                  {documentDetails[doc.numero] ? (
+                                    <Box>
+                                      {/* Información General */}
+                                      <Card variant="outlined" sx={{ mb: 2 }}>
+                                        <CardContent>
+                                          <Typography variant="h6" gutterBottom>
+                                            Información General
+                                          </Typography>
+                                          <Grid container spacing={2}>
+                                            <Grid item xs={12} md={6}>
+                                              <Typography variant="body2">
+                                                <strong>Número:</strong> {documentDetails[doc.numero].numero}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>Tipo:</strong> {documentDetails[doc.numero].tipo_descripcion || documentDetails[doc.numero].tipo}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>Fecha:</strong> {documentDetails[doc.numero].fecha ? new Date(documentDetails[doc.numero].fecha).toLocaleDateString() : 'N/A'}
+                                              </Typography>
+                                            </Grid>
+                                            <Grid item xs={12} md={6}>
+                                              <Typography variant="body2">
+                                                <strong>Código Arca:</strong> {documentDetails[doc.numero].codigo_arca || 'N/A'}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>Estado:</strong> {documentDetails[doc.numero].estado || 'Procesado'}
+                                              </Typography>
+                                            </Grid>
+                                          </Grid>
+                                        </CardContent>
+                                      </Card>
+
+                                      {/* Totales */}
+                                      <Card variant="outlined" sx={{ mb: 2 }}>
+                                        <CardContent>
+                                          <Typography variant="h6" gutterBottom>
+                                            Totales
+                                          </Typography>
+                                          <Grid container spacing={2}>
+                                            <Grid item xs={6} md={3}>
+                                              <Typography variant="body2">
+                                                <strong>Subtotal:</strong> ${documentDetails[doc.numero].subtotal?.toFixed(2) || '0.00'}
+                                              </Typography>
+                                            </Grid>
+                                            <Grid item xs={6} md={3}>
+                                              <Typography variant="body2">
+                                                <strong>IVA:</strong> ${documentDetails[doc.numero].iva?.toFixed(2) || '0.00'}
+                                              </Typography>
+                                            </Grid>
+                                            <Grid item xs={6} md={3}>
+                                              <Typography variant="body2">
+                                                <strong>Total:</strong> ${documentDetails[doc.numero].total?.toFixed(2) || '0.00'}
+                                              </Typography>
+                                            </Grid>
+                                            <Grid item xs={6} md={3}>
+                                              <Typography variant="body2" color={documentDetails[doc.numero].saldo > 0 ? 'warning.main' : 'success.main'}>
+                                                <strong>Saldo:</strong> ${documentDetails[doc.numero].saldo?.toFixed(2) || '0.00'}
+                                              </Typography>
+                                            </Grid>
+                                          </Grid>
+                                          {documentDetails[doc.numero].total_percepciones > 0 && (
+                                            <Typography variant="body2" sx={{ mt: 1 }}>
+                                              <strong>Total Percepciones:</strong> ${documentDetails[doc.numero].total_percepciones?.toFixed(2) || '0.00'}
+                                            </Typography>
+                                          )}
+                                        </CardContent>
+                                      </Card>
+
+                                      {/* Detalles de Percepciones */}
+                                      {documentDetails[doc.numero].percepcion_detalles && documentDetails[doc.numero].percepcion_detalles.length > 0 && (
+                                        <Card variant="outlined" sx={{ mb: 2 }}>
+                                          <CardContent>
+                                            <Typography variant="h6" gutterBottom>
+                                              Percepciones
+                                            </Typography>
+                                            <TableContainer component={Paper} variant="outlined">
+                                              <Table size="small">
+                                                <TableHead>
+                                                  <TableRow>
+                                                    <TableCell>Tipo</TableCell>
+                                                    <TableCell>Descripción</TableCell>
+                                                    <TableCell align="right">Importe</TableCell>
+                                                  </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                  {documentDetails[doc.numero].percepcion_detalles.map((percepcion, pIndex) => (
+                                                    <TableRow key={pIndex}>
+                                                      <TableCell>{percepcion.tipo}</TableCell>
+                                                      <TableCell>{percepcion.descripcion}</TableCell>
+                                                      <TableCell align="right">${percepcion.importe?.toFixed(2) || '0.00'}</TableCell>
+                                                    </TableRow>
+                                                  ))}
+                                                </TableBody>
+                                              </Table>
+                                            </TableContainer>
+                                          </CardContent>
+                                        </Card>
+                                      )}
+
+                                      {/* Detalles de Productos */}
+                                      {documentDetails[doc.numero].producto_detalles && documentDetails[doc.numero].producto_detalles.length > 0 && (
+                                        <Card variant="outlined">
+                                          <CardContent>
+                                            <Typography variant="h6" gutterBottom>
+                                              Productos
+                                            </Typography>
+                                            <TableContainer component={Paper} variant="outlined">
+                                              <Table size="small">
+                                                <TableHead>
+                                                  <TableRow>
+                                                    <TableCell>Código</TableCell>
+                                                    <TableCell>Descripción</TableCell>
+                                                    <TableCell>Marca</TableCell>
+                                                    <TableCell align="right">Cantidad</TableCell>
+                                                    <TableCell align="right">Precio Unit.</TableCell>
+                                                    <TableCell align="right">Subtotal</TableCell>
+                                                  </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                  {documentDetails[doc.numero].producto_detalles.map((producto, prodIndex) => (
+                                                    <TableRow key={prodIndex}>
+                                                      <TableCell>
+                                                        <Typography variant="caption" fontFamily="monospace">
+                                                          {producto.codigo}
+                                                        </Typography>
+                                                      </TableCell>
+                                                      <TableCell>{producto.descripcion}</TableCell>
+                                                      <TableCell>
+                                                        <Chip 
+                                                          label={producto.marca}
+                                                          size="small"
+                                                          variant="outlined"
+                                                        />
+                                                      </TableCell>
+                                                      <TableCell align="right">{producto.cantidad}</TableCell>
+                                                      <TableCell align="right">${producto.precio_unitario?.toFixed(2) || '0.00'}</TableCell>
+                                                      <TableCell align="right">
+                                                        <Typography variant="body2" fontWeight="bold" color="primary">
+                                                          ${producto.subtotal?.toFixed(2) || '0.00'}
+                                                        </Typography>
+                                                      </TableCell>
+                                                    </TableRow>
+                                                  ))}
+                                                </TableBody>
+                                              </Table>
+                                            </TableContainer>
+                                          </CardContent>
+                                        </Card>
+                                      )}
+                                    </Box>
+                                  ) : (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                                      <CircularProgress size={24} />
+                                      <Typography variant="body2" sx={{ ml: 2 }}>
+                                        Cargando detalles del documento...
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>

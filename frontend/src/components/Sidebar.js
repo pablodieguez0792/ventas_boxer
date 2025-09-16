@@ -61,7 +61,8 @@ const Sidebar = () => {
   ];
 
   const chatbotItems = [
-    { path: '/chatbot', label: 'Chatbot', icon: <SmartToy /> },
+    { path: '/chatbot/original', label: 'CHATBOT ORIGINAL', icon: <SmartToy /> },
+    { path: '/chatbot/modulos', label: 'CHATBOT X MODULOS', icon: <SmartToy /> },
   ];
 
   const conexionesApiItems = [
