@@ -13,6 +13,7 @@ from fuzzywuzzy import fuzz, process
 from api_routes import router as api_router
 from rsf_routes import router as rsf_router
 from promotive_routes import router as promotive_router
+from tiendanube_routes import router as tiendanube_router
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
@@ -123,6 +124,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(api_router)
 app.include_router(rsf_router)
 app.include_router(promotive_router)
+app.include_router(tiendanube_router)
 
 # Dependency to get database session
 def get_db():

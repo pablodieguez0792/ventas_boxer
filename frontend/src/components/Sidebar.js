@@ -29,6 +29,7 @@ import {
   Api,
   Agriculture,
   Business,
+  CloudSync,
 } from '@mui/icons-material';
 
 const DRAWER_WIDTH = 280;
@@ -67,7 +68,9 @@ const Sidebar = () => {
 
   const conexionesApiItems = [
     { path: '/conexiones-api/rural-santa-fe', label: 'Rural Santa Fe', icon: <Agriculture /> },
-    { path: '/conexiones-api/promotive', label: 'Promotive', icon: <Business /> },
+    { path: '/conexiones-api/promotive-api', label: 'Promotive - API', icon: <Business /> },
+    { path: '/conexiones-api/promotive-articulos', label: 'Artículos', icon: <ShoppingCart /> },
+    { path: '/conexiones-api/tiendanube', label: 'Tienda Nube', icon: <CloudSync /> },
   ];
 
   const isActive = (path) => location.pathname === path;

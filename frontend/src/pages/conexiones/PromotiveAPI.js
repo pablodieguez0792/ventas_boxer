@@ -60,7 +60,7 @@ import {
   FiberManualRecord,
 } from "@mui/icons-material";
 
-const Promotive = () => {
+const PromotiveAPI = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [clientId, setClientId] = useState("8e4aa28708151c851ddceb70bd5cc8be");
   const [clientSecret, setClientSecret] = useState(
@@ -1710,4 +1710,4 @@ const Promotive = () => {
   );
 };
 
-export default Promotive;
+export default PromotiveAPI;

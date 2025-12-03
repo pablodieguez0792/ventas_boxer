@@ -365,10 +365,35 @@ async def send_rsf_order(request: RSFOrderRequest, db: Session = Depends(lambda:
                 logger.error(f"Error guardando orden en BD local: {db_error}")
                 # No fallar el endpoint por error de BD local
         
+        # Procesar respuesta completa según documentación RSF
+        response_data = {
+            "cuenta": result.get('cuenta', ''),
+            "comentarios": result.get('comentarios', ''),
+            "valido": result.get('valido', False),
+            "test": result.get('test', True),
+            "trasaccion": result.get('trasaccion', ''),
+            "error": result.get('error', 0),
+            "errorDescripcion": result.get('errorDescripcion', ''),
+            "productosConfirmados": result.get('productosConfirmados', []),
+            "productosSinConfirmar": result.get('productosSinConfirmar', [])
+        }
+        
+        # Determinar mensaje basado en validación
+        if response_data['valido']:
+            confirmados = len(response_data['productosConfirmados'])
+            sin_confirmar = len(response_data['productosSinConfirmar'])
+            
+            if sin_confirmar > 0:
+                message = f"Pedido procesado: {confirmados} productos confirmados, {sin_confirmar} sin confirmar"
+            else:
+                message = f"Pedido enviado exitosamente: {confirmados} productos confirmados"
+        else:
+            message = f"Error en pedido: {response_data['errorDescripcion']}"
+        
         return {
-            "success": True,
-            "message": "Pedido enviado exitosamente",
-            "data": result
+            "success": response_data['valido'],
+            "message": message,
+            "data": response_data
         }
         
     except Exception as e:

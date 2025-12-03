@@ -9,7 +9,9 @@ import ChatbotSections from './pages/ChatbotSections';
 import ChatbotSection from './pages/ChatbotSection';
 import ChatbotModulos from './pages/ChatbotModulos';
 import RuralSantaFe from './pages/conexiones/RuralSantaFe';
-import Promotive from './pages/conexiones/Promotive';
+import PromotiveAPI from './pages/conexiones/PromotiveAPI';
+import PromotiveArticulos from './pages/conexiones/PromotiveArticulos';
+import TiendaNubeAPI from './pages/conexiones/TiendaNubeAPI';
 import VentasContainer from './pages/VentasContainer';
 import MercadoLibreContainer from './pages/MercadoLibreContainer';
 import CRMContainer from './pages/CRMContainer';
@@ -85,7 +87,9 @@ function App() {
                 <Route path="/chatbot/modulos" element={<ChatbotModulos />} />
                 <Route path="/chatbot/:sectionName" element={<ChatbotSection />} />
                 <Route path="/conexiones-api/rural-santa-fe" element={<RuralSantaFe />} />
-                <Route path="/conexiones-api/promotive" element={<Promotive />} />
+                <Route path="/conexiones-api/promotive-api" element={<PromotiveAPI />} />
+                <Route path="/conexiones-api/promotive-articulos" element={<PromotiveArticulos />} />
+                <Route path="/conexiones-api/tiendanube" element={<TiendaNubeAPI />} />
                 <Route path="/" element={<VentasContainer />} />
               </Routes>
             </Box>

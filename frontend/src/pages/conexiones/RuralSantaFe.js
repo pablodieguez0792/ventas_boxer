@@ -28,7 +28,17 @@ import {
   LinearProgress,
   IconButton,
   Tooltip,
+  Collapse,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Autocomplete,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   Agriculture,
@@ -52,7 +62,8 @@ import {
   GetApp,
   ExpandMore,
   ExpandLess,
-  Visibility
+  Visibility,
+  Add
 } from '@mui/icons-material';
 
 const RuralSantaFe = () => {
@@ -78,6 +89,15 @@ const RuralSantaFe = () => {
   const [expandedOrders, setExpandedOrders] = useState(new Set());
   const [expandedDocuments, setExpandedDocuments] = useState(new Set());
   const [documentDetails, setDocumentDetails] = useState({});
+  
+  // Estados para crear pedido
+  const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const [orderProducts, setOrderProducts] = useState([]);
+  const [orderComment, setOrderComment] = useState('');
+  const [orderEmail, setOrderEmail] = useState('');
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productQuantity, setProductQuantity] = useState(1);
   
   // Filtros de productos
   const [filterMarca, setFilterMarca] = useState('');
@@ -312,7 +332,7 @@ const RuralSantaFe = () => {
   const loadOrders = async () => {
     setLoadingOrders(true);
     try {
-      const response = await fetch('/api/rsf/orders-history');
+      const response = await fetch('http://localhost:8000/api/rsf/orders-history');
       const data = await response.json();
       if (data.success) {
         setOrders(data.data);
@@ -322,19 +342,109 @@ const RuralSantaFe = () => {
     } catch (error) {
       console.error('Error cargando órdenes:', error);
       alert('Error de conexión al cargar órdenes');
-    } finally {
       setLoadingOrders(false);
     }
   };
 
-  const toggleOrderExpansion = (orderId) => {
+  const toggleOrderExpansion = (orderNumber) => {
     const newExpanded = new Set(expandedOrders);
-    if (newExpanded.has(orderId)) {
-      newExpanded.delete(orderId);
+    if (newExpanded.has(orderNumber)) {
+      newExpanded.delete(orderNumber);
     } else {
-      newExpanded.add(orderId);
+      newExpanded.add(orderNumber);
     }
     setExpandedOrders(newExpanded);
+  };
+
+  // Funciones para crear pedido
+  const addProductToOrder = () => {
+    if (!selectedProduct || productQuantity <= 0) {
+      alert('Selecciona un producto y cantidad válida');
+      return;
+    }
+
+    const existingIndex = orderProducts.findIndex(p => p.codigo_rsf === selectedProduct.codigo_rsf);
+    
+    if (existingIndex >= 0) {
+      // Actualizar cantidad si ya existe
+      const updatedProducts = [...orderProducts];
+      updatedProducts[existingIndex].cantidad += productQuantity;
+      setOrderProducts(updatedProducts);
+    } else {
+      // Agregar nuevo producto
+      setOrderProducts([...orderProducts, {
+        codigo_rsf: selectedProduct.codigo_rsf,
+        articulo: selectedProduct.articulo,
+        marca_rsf: selectedProduct.marca_rsf,
+        marca_original: selectedProduct.marca_original,
+        fabrica: selectedProduct.fabrica,
+        descripcion: selectedProduct.descripcion,
+        cantidad: productQuantity,
+        precio_neto: selectedProduct.precio_neto
+      }]);
+    }
+
+    setSelectedProduct(null);
+    setProductQuantity(1);
+  };
+
+  const removeProductFromOrder = (index) => {
+    const updatedProducts = orderProducts.filter((_, i) => i !== index);
+    setOrderProducts(updatedProducts);
+  };
+
+  const createOrder = async () => {
+    if (orderProducts.length === 0) {
+      alert('Agrega al menos un producto al pedido');
+      return;
+    }
+
+    setCreatingOrder(true);
+    try {
+      const orderData = {
+        test: true, // Siempre en modo TEST
+        comentario: orderComment || 'Pedido creado desde Ventas Boxer',
+        email: orderEmail || '',
+        products: orderProducts.map(p => ({
+          cantidad: p.cantidad,
+          codigo_rsf: p.codigo_rsf,
+          articulo: p.articulo,
+          marca_rsf: p.marca_rsf,
+          marca_original: p.marca_original,
+          fabrica: p.fabrica
+        }))
+      };
+
+      const response = await fetch('http://localhost:8000/api/rsf/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`Pedido enviado exitosamente!\n\nTransacción: ${result.data.trasaccion}\nProductos confirmados: ${result.data.productosConfirmados?.length || 0}\nProductos sin confirmar: ${result.data.productosSinConfirmar?.length || 0}`);
+        
+        // Limpiar formulario
+        setOrderProducts([]);
+        setOrderComment('');
+        setOrderEmail('');
+        setShowCreateOrder(false);
+        
+        // Recargar órdenes
+        loadOrders();
+      } else {
+        alert('Error enviando pedido: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error enviando pedido:', error);
+      alert('Error de conexión al enviar pedido');
+    } finally {
+      setCreatingOrder(false);
+    }
   };
 
   const toggleDocumentExpansion = async (docNumber) => {
@@ -1042,14 +1152,25 @@ const RuralSantaFe = () => {
                 <Typography variant="h6">
                   Órdenes ({orders.length})
                 </Typography>
-                <Button 
-                  variant="contained" 
-                  onClick={loadOrders}
-                  disabled={loadingOrders || !isConnected}
-                  startIcon={loadingOrders ? <CircularProgress size={20} /> : <Refresh />}
-                >
-                  {loadingOrders ? 'Cargando...' : 'Cargar Órdenes'}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button 
+                    variant="outlined"
+                    onClick={() => setShowCreateOrder(true)}
+                    disabled={!isConnected}
+                    startIcon={<Add />}
+                    color="success"
+                  >
+                    Crear Pedido
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    onClick={loadOrders}
+                    disabled={loadingOrders || !isConnected}
+                    startIcon={loadingOrders ? <CircularProgress size={20} /> : <Refresh />}
+                  >
+                    {loadingOrders ? 'Cargando...' : 'Cargar Órdenes'}
+                  </Button>
+                </Box>
               </Box>
               
               {loadingOrders && <LinearProgress sx={{ mb: 2 }} />}
@@ -1211,6 +1332,216 @@ const RuralSantaFe = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog para crear pedido */}
+      <Dialog 
+        open={showCreateOrder} 
+        onClose={() => setShowCreateOrder(false)} 
+        maxWidth="md" 
+        fullWidth
+        onEntering={() => {
+          // Cargar productos si no están cargados cuando se abre el diálogo
+          if (allProducts.length === 0 && isConnected) {
+            loadProducts(1);
+          }
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ShoppingCart />
+            <Typography variant="h6">Crear Nuevo Pedido (Modo TEST)</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            {/* Información del pedido */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Comentario (opcional)"
+                  value={orderComment}
+                  onChange={(e) => setOrderComment(e.target.value)}
+                  placeholder="Comentario sobre el pedido"
+                  multiline
+                  rows={2}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Email (opcional)"
+                  value={orderEmail}
+                  onChange={(e) => setOrderEmail(e.target.value)}
+                  placeholder="email@ejemplo.com"
+                  type="email"
+                />
+              </Grid>
+            </Grid>
+
+            {/* Selector de productos */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Agregar Productos 
+                {allProducts.length > 0 && (
+                  <Chip 
+                    label={`${allProducts.length} productos disponibles`} 
+                    size="small" 
+                    color="info" 
+                    sx={{ ml: 1 }} 
+                  />
+                )}
+              </Typography>
+              
+              {allProducts.length === 0 ? (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  No hay productos cargados. Ve a la pestaña "Productos" y haz clic en "Cargar Productos" primero.
+                </Alert>
+              ) : (
+                <Grid container spacing={2} alignItems="end">
+                  <Grid item xs={12} md={6}>
+                    <Autocomplete
+                      options={allProducts}
+                      getOptionLabel={(option) => `${option.codigo_rsf} - ${option.descripcion} (${option.marca_rsf})`}
+                      value={selectedProduct}
+                      onChange={(event, newValue) => setSelectedProduct(newValue)}
+                      renderInput={(params) => (
+                        <TextField 
+                          {...params} 
+                          label="Buscar producto" 
+                          placeholder="Busca por código, descripción o marca"
+                          helperText={`${allProducts.length} productos disponibles para búsqueda`}
+                        />
+                      )}
+                      renderOption={(props, option) => (
+                        <Box component="li" {...props}>
+                          <Box>
+                            <Typography variant="body2" fontWeight="bold">
+                              {option.codigo_rsf} - {option.articulo}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {option.descripcion} | {option.marca_rsf} | Stock: {option.stock_status}
+                            </Typography>
+                            <Typography variant="caption" color="primary" sx={{ ml: 1 }}>
+                              ${option.precio_neto?.toLocaleString('es-AR')}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+                      filterOptions={(options, { inputValue }) => {
+                        return options.filter(option =>
+                          option.codigo_rsf.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          option.descripcion.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          option.marca_rsf.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          option.articulo.toLowerCase().includes(inputValue.toLowerCase())
+                        );
+                      }}
+                      noOptionsText="No se encontraron productos. Prueba con otros términos de búsqueda."
+                    />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Cantidad"
+                    type="number"
+                    value={productQuantity}
+                    onChange={(e) => setProductQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    inputProps={{ min: 1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={addProductToOrder}
+                    disabled={!selectedProduct}
+                    startIcon={<Add />}
+                  >
+                    Agregar
+                  </Button>
+                </Grid>
+              </Grid>
+              )}
+            </Box>
+
+            {/* Lista de productos en el pedido */}
+            {orderProducts.length > 0 && (
+              <Box>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Productos en el Pedido ({orderProducts.length})
+                </Typography>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Código RSF</TableCell>
+                        <TableCell>Descripción</TableCell>
+                        <TableCell>Marca</TableCell>
+                        <TableCell align="center">Cantidad</TableCell>
+                        <TableCell align="right">Precio Unit.</TableCell>
+                        <TableCell align="right">Subtotal</TableCell>
+                        <TableCell align="center">Acciones</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {orderProducts.map((product, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Typography variant="body2" fontFamily="monospace">
+                              {product.codigo_rsf}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{product.descripcion}</TableCell>
+                          <TableCell>{product.marca_rsf}</TableCell>
+                          <TableCell align="center">
+                            <Chip label={product.cantidad} size="small" />
+                          </TableCell>
+                          <TableCell align="right">
+                            ${product.precio_neto?.toLocaleString('es-AR') || '0'}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" fontWeight="bold">
+                              ${((product.precio_neto || 0) * product.cantidad).toLocaleString('es-AR')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => removeProductFromOrder(index)}
+                            >
+                              <Error />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                
+                <Box sx={{ mt: 2, textAlign: 'right' }}>
+                  <Typography variant="h6">
+                    Total: ${orderProducts.reduce((sum, p) => sum + ((p.precio_neto || 0) * p.cantidad), 0).toLocaleString('es-AR')}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCreateOrder(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={createOrder}
+            disabled={creatingOrder || orderProducts.length === 0}
+            startIcon={creatingOrder ? <CircularProgress size={20} /> : <ShoppingCart />}
+          >
+            {creatingOrder ? 'Enviando...' : 'Enviar Pedido (TEST)'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
