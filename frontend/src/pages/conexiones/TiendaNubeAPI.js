@@ -46,6 +46,7 @@ import {
   Code,
   Link as LinkIcon,
 } from '@mui/icons-material';
+import { AccountSelector, BulkProductUpload, BulkStockUpdate } from '../../components/TiendaNubeExtensions';
 
 const TiendaNubeAPI = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -711,6 +712,14 @@ const TiendaNubeAPI = () => {
       {/* Tab: Configuración */}
       {tabValue === 0 && (
         <Grid container spacing={3}>
+          {/* Selector de Cuentas */}
+          <Grid item xs={12}>
+            <AccountSelector onAccountChange={(account) => {
+              console.log('Cuenta cambiada:', account);
+              checkConnection();
+            }} />
+          </Grid>
+
           {/* Estado de Conexión */}
           <Grid item xs={12} md={6}>
             <Card>
@@ -937,12 +946,17 @@ const TiendaNubeAPI = () => {
 
       {/* Tab: Agregar Producto */}
       {tabValue === 2 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Inventory /> Agregar Nuevo Producto
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
+        <Box>
+          {/* Carga Masiva */}
+          <BulkProductUpload />
+
+          {/* Agregar Producto Individual */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Inventory /> Agregar Producto Individual
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
 
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
@@ -1040,16 +1054,22 @@ const TiendaNubeAPI = () => {
             </Alert>
           </CardContent>
         </Card>
+        </Box>
       )}
 
       {/* Tab: Sincronizar Stock */}
       {tabValue === 3 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CloudSync /> Sincronizar Stock y Precios
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
+        <Box>
+          {/* Exportar/Importar Masivo */}
+          <BulkStockUpdate />
+
+          {/* Sincronización Individual */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CloudSync /> Sincronizar Stock y Precios (Individual)
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
 
             <Alert severity="info" sx={{ mb: 3 }}>
               <Typography variant="body2">
@@ -1218,6 +1238,7 @@ const TiendaNubeAPI = () => {
             )}
           </CardContent>
         </Card>
+        </Box>
       )}
 
       {/* Tab: MercadoLibre */}

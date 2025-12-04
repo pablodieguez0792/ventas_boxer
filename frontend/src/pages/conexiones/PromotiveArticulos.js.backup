@@ -1,0 +1,548 @@
+import React, { useState } from "react";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  InputAdornment,
+  IconButton,
+  Fab,
+  Tooltip,
+  Menu,
+  MenuItem as MenuItemComp,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+} from "@mui/material";
+import {
+  Search,
+  Refresh,
+  Assignment,
+  Print,
+  LocalShipping,
+  Label,
+  ExpandMore,
+  Add,
+  FilterList,
+  Edit,
+  VisibilityOff,
+  MoreVert,
+  Delete,
+  GetApp,
+  Publish,
+  RestartAlt,
+  CheckBoxOutlineBlank,
+} from "@mui/icons-material";
+import VisualEditor from "../../components/VisualEditor";
+import AutoEditableWrapper from "../../components/AutoEditableWrapper";
+import ElementCreator from "../../components/ElementCreator";
+import { usePersistedStyles } from "../../hooks/usePersistedStyles";
+
+const PromotiveArticulos = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterAutopartes, setFilterAutopartes] = useState("Autopartes");
+  const [filterTodas, setFilterTodas] = useState("Todas");
+  const [filterModelo, setFilterModelo] = useState("");
+  
+  // Estados para el editor visual
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedElement, setSelectedElement] = useState(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [customElements, setCustomElements] = useState([]);
+  
+  // Hook para persistencia de estilos
+  const {
+    customStyles,
+    saveStyles,
+    updateStyles,
+    resetAllStyles,
+    exportStyles,
+    importStyles,
+  } = usePersistedStyles();
+
+  // Columnas exactas según la imagen
+  const columns = [
+    { id: "checkbox", label: "", width: "40px" },
+    { id: "imagenAdjunto", label: "Imagen Adjunto", width: "110px" },
+    { id: "imagen", label: "Imagen", width: "90px" },
+    { id: "articulo", label: "Artículo", width: "90px" },
+    { id: "original", label: "Original", width: "90px" },
+    { id: "familia", label: "Familia", width: "90px" },
+    { id: "descripcion", label: "Descripción", width: "130px" },
+    { id: "marca", label: "Marca", width: "80px" },
+    { id: "modelo", label: "Modelo", width: "90px" },
+    { id: "eMotor", label: "E. de Motor", width: "100px" },
+    { id: "nChassis", label: "N° Chassis", width: "100px" },
+    { id: "stock", label: "Stock", width: "70px" },
+    { id: "stockDisponible", label: "Stock Disponible", width: "120px" },
+    { id: "proveedores", label: "Proveedores", width: "100px" },
+    { id: "ubicacion", label: "Ubicación", width: "90px" },
+    { id: "cantidad", label: "Cantidad", width: "80px" },
+  ];
+
+  const handleSelectElement = (elementInfo) => {
+    setSelectedElement(elementInfo);
+    setEditorOpen(true);
+  };
+
+  const handleUpdateStyles = (newStyles) => {
+    if (selectedElement) {
+      updateStyles(selectedElement.id, newStyles);
+    }
+  };
+
+  const handleSaveStyles = (elementId, styles) => {
+    saveStyles(elementId, styles);
+  };
+
+  const handleCreateElement = (newElement) => {
+    setCustomElements([...customElements, newElement]);
+    saveStyles(newElement.id, newElement.styles);
+  };
+
+  const handleMenuOpen = (event) => {
+    setMenuAnchor(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleImportStyles = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (importStyles(event.target.result)) {
+          alert("✅ Estilos importados correctamente");
+          window.location.reload();
+        } else {
+          alert("❌ Error al importar estilos");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+    handleMenuClose();
+  };
+
+  const handleResetAll = () => {
+    if (window.confirm("¿Estás seguro de que quieres resetear todos los estilos?")) {
+      resetAllStyles();
+      window.location.reload();
+    }
+    handleMenuClose();
+  };
+
+  return (
+    <Box sx={{ p: 2.5, backgroundColor: "#fafafa", minHeight: "100vh" }}>
+      {/* Header simple */}
+      <AutoEditableWrapper
+        isEditMode={isEditMode}
+        onSelect={handleSelectElement}
+        customStyles={customStyles}
+        forceId="header-container"
+      >
+        <Box sx={{ mb: 2 }}>
+          <AutoEditableWrapper
+            isEditMode={isEditMode}
+            onSelect={handleSelectElement}
+            customStyles={customStyles}
+            forceId="header-subtitle"
+          >
+            <Typography
+              sx={{
+                fontSize: "11px",
+                color: "#999",
+                fontWeight: 400,
+                mb: 0.3,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              ARTÍCULOS
+            </Typography>
+          </AutoEditableWrapper>
+          <AutoEditableWrapper
+            isEditMode={isEditMode}
+            onSelect={handleSelectElement}
+            customStyles={customStyles}
+            forceId="header-title"
+          >
+            <Typography
+              sx={{
+                fontSize: "18px",
+                color: "#333",
+                fontWeight: 600,
+              }}
+            >
+              Artículos
+            </Typography>
+          </AutoEditableWrapper>
+        </Box>
+      </AutoEditableWrapper>
+
+      {/* Contenedor principal blanco */}
+      <AutoEditableWrapper
+        isEditMode={isEditMode}
+        onSelect={handleSelectElement}
+        customStyles={customStyles}
+        forceId="main-container"
+      >
+        <Paper
+          sx={{
+            backgroundColor: "white",
+            borderRadius: "4px",
+            border: "1px solid #e0e0e0",
+            overflow: "hidden",
+          }}
+        >
+          {/* Barra de búsqueda y filtros */}
+          <Box sx={{ p: 2, borderBottom: "1px solid #e0e0e0" }}>
+            {/* Primera fila: búsqueda y filtros */}
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1.5 }}>
+              {/* Campo de búsqueda */}
+              <AutoEditableWrapper
+                isEditMode={isEditMode}
+                onSelect={handleSelectElement}
+                customStyles={customStyles}
+                forceId="search-field"
+              >
+                <TextField
+                  placeholder="Buscar por código o descripción"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  size="small"
+                  sx={{
+                    width: "260px",
+                    "& .MuiOutlinedInput-root": {
+                      fontSize: "12px",
+                      height: "34px",
+                      backgroundColor: "white",
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      padding: "8px 12px",
+                    },
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search sx={{ fontSize: 16, color: "#666" }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </AutoEditableWrapper>
+
+              {/* Botón lupa */}
+              <AutoEditableWrapper
+                isEditMode={isEditMode}
+                onSelect={handleSelectElement}
+                customStyles={customStyles}
+                forceId="search-button"
+              >
+                <IconButton
+                  sx={{
+                    width: "34px",
+                    height: "34px",
+                    border: "1px solid #d0d0d0",
+                    borderRadius: "4px",
+                    color: "#666",
+                    "&:hover": {
+                      backgroundColor: "#f5f5f5",
+                    },
+                  }}
+                >
+                  <Search sx={{ fontSize: 16 }} />
+                </IconButton>
+              </AutoEditableWrapper>
+
+              {/* Select Autopartes */}
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <AutoEditableWrapper
+                  isEditMode={isEditMode}
+                  onSelect={handleSelectElement}
+                  customStyles={customStyles}
+                  forceId="filter-autopartes"
+                >
+                  <Select
+                    value={filterAutopartes}
+                    onChange={(e) => setFilterAutopartes(e.target.value)}
+                    sx={{
+                      fontSize: "12px",
+                      height: "34px",
+                      backgroundColor: "white",
+                      "& .MuiSelect-select": {
+                        padding: "7px 12px",
+                      },
+                    }}
+                  >
+                    <MenuItem value="Autopartes" sx={{ fontSize: "12px" }}>
+                      Autopartes
+                    </MenuItem>
+                  </Select>
+                </AutoEditableWrapper>
+              </FormControl>
+
+              {/* Select Todas */}
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <AutoEditableWrapper
+                  isEditMode={isEditMode}
+                  onSelect={handleSelectElement}
+                  customStyles={customStyles}
+                  forceId="filter-todas"
+                >
+                  <Select
+                    value={filterTodas}
+                    onChange={(e) => setFilterTodas(e.target.value)}
+                    sx={{
+                      fontSize: "12px",
+                      height: "34px",
+                      backgroundColor: "white",
+                      "& .MuiSelect-select": {
+                        padding: "7px 12px",
+                      },
+                    }}
+                  >
+                    <MenuItem value="Todas" sx={{ fontSize: "12px" }}>
+                      Todas
+                    </MenuItem>
+                  </Select>
+                </AutoEditableWrapper>
+              </FormControl>
+
+              {/* Campo Modelo */}
+              <AutoEditableWrapper
+                isEditMode={isEditMode}
+                onSelect={handleSelectElement}
+                customStyles={customStyles}
+                forceId="filter-modelo"
+              >
+                <TextField
+                  placeholder="Modelo (sin selección)"
+                  value={filterModelo}
+                  onChange={(e) => setFilterModelo(e.target.value)}
+                  size="small"
+                  sx={{
+                    width: "160px",
+                    "& .MuiOutlinedInput-root": {
+                      fontSize: "12px",
+                      height: "34px",
+                      backgroundColor: "white",
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      padding: "8px 12px",
+                    },
+                  }}
+                />
+              </AutoEditableWrapper>
+
+              {/* Botón Filtros Avanzados */}
+              <Box sx={{ ml: "auto" }}>
+                <AutoEditableWrapper
+                  isEditMode={isEditMode}
+                  onSelect={handleSelectElement}
+                  customStyles={customStyles}
+                  forceId="btn-filtros-avanzados"
+                >
+                  <Button
+                    variant="text"
+                    endIcon={<FilterList sx={{ fontSize: 14 }} />}
+                    sx={{
+                      fontSize: "10px",
+                      textTransform: "uppercase",
+                      color: "#1976d2",
+                      fontWeight: 600,
+                      height: "34px",
+                      px: 1.5,
+                      letterSpacing: "0.3px",
+                      "&:hover": {
+                        backgroundColor: "rgba(25, 118, 210, 0.04)",
+                      },
+                    }}
+                  >
+                    FILTROS AVANZADOS
+                  </Button>
+                </AutoEditableWrapper>
+              </Box>
+            </Box>
+
+            {/* Segunda fila: botones de acción */}
+            <Box sx={{ display: "flex", gap: 0.8, mb: 1.5, flexWrap: "wrap" }}>
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-stock-reservado">
+                <Button variant="contained" startIcon={<Refresh sx={{ fontSize: 13 }} />} sx={{ backgroundColor: "#424242", color: "white", fontSize: "9px", textTransform: "uppercase", fontWeight: 700, height: "28px", px: 1.2, minWidth: "auto", letterSpacing: "0.3px", "&:hover": { backgroundColor: "#303030" } }}>
+                  STOCK RESERVADO
+                </Button>
+              </AutoEditableWrapper>
+
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-descargar-articulos">
+                <Button variant="contained" startIcon={<Assignment sx={{ fontSize: 13 }} />} sx={{ backgroundColor: "#424242", color: "white", fontSize: "9px", textTransform: "uppercase", fontWeight: 700, height: "28px", px: 1.2, minWidth: "auto", letterSpacing: "0.3px", "&:hover": { backgroundColor: "#303030" } }}>
+                  DESCARGAR ARTÍCULOS
+                </Button>
+              </AutoEditableWrapper>
+
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-imprimir">
+                <Button variant="contained" startIcon={<Print sx={{ fontSize: 13 }} />} sx={{ backgroundColor: "#424242", color: "white", fontSize: "9px", textTransform: "uppercase", fontWeight: 700, height: "28px", px: 1.2, minWidth: "auto", letterSpacing: "0.3px", "&:hover": { backgroundColor: "#303030" } }}>
+                  IMPRIMIR
+                </Button>
+              </AutoEditableWrapper>
+
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-carga-masiva">
+                <Button variant="contained" startIcon={<LocalShipping sx={{ fontSize: 13 }} />} sx={{ backgroundColor: "#424242", color: "white", fontSize: "9px", textTransform: "uppercase", fontWeight: 700, height: "28px", px: 1.2, minWidth: "auto", letterSpacing: "0.3px", "&:hover": { backgroundColor: "#303030" } }}>
+                  CARGA MASIVA STOCK
+                </Button>
+              </AutoEditableWrapper>
+
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-impresion-etiquetas">
+                <Button variant="contained" startIcon={<Label sx={{ fontSize: 13 }} />} sx={{ backgroundColor: "#424242", color: "white", fontSize: "9px", textTransform: "uppercase", fontWeight: 700, height: "28px", px: 1.2, minWidth: "auto", letterSpacing: "0.3px", "&:hover": { backgroundColor: "#303030" } }}>
+                  IMPRESIÓN ETIQUETAS
+                </Button>
+              </AutoEditableWrapper>
+            </Box>
+
+            {/* Tercera fila: botones con checkboxes */}
+            <Box sx={{ display: "flex", gap: 0.8, alignItems: "center" }}>
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-guardar-combinacion">
+                <Button variant="outlined" startIcon={<CheckBoxOutlineBlank sx={{ fontSize: 14 }} />} endIcon={<ExpandMore sx={{ fontSize: 14 }} />} sx={{ fontSize: "9px", textTransform: "uppercase", fontWeight: 600, height: "28px", px: 1, borderColor: "#d0d0d0", color: "#555", minWidth: "auto", letterSpacing: "0.2px", "&:hover": { borderColor: "#999", backgroundColor: "#fafafa" } }}>
+                  GUARDAR COMBINACIÓN DE ARTÍCULOS
+                </Button>
+              </AutoEditableWrapper>
+
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-articulo-listado">
+                <Button variant="outlined" startIcon={<CheckBoxOutlineBlank sx={{ fontSize: 14 }} />} endIcon={<ExpandMore sx={{ fontSize: 14 }} />} sx={{ fontSize: "9px", textTransform: "uppercase", fontWeight: 600, height: "28px", px: 1, borderColor: "#d0d0d0", color: "#555", minWidth: "auto", letterSpacing: "0.2px", "&:hover": { borderColor: "#999", backgroundColor: "#fafafa" } }}>
+                  ARTÍCULO LISTADO ANTERIOR
+                </Button>
+              </AutoEditableWrapper>
+
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-guardar-codigo">
+                <Button variant="outlined" startIcon={<CheckBoxOutlineBlank sx={{ fontSize: 14 }} />} endIcon={<ExpandMore sx={{ fontSize: 14 }} />} sx={{ fontSize: "9px", textTransform: "uppercase", fontWeight: 600, height: "28px", px: 1, borderColor: "#d0d0d0", color: "#555", minWidth: "auto", letterSpacing: "0.2px", "&:hover": { borderColor: "#999", backgroundColor: "#fafafa" } }}>
+                  GUARDAR CÓDIGO
+                </Button>
+              </AutoEditableWrapper>
+
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-guardar-documento">
+                <Button variant="outlined" startIcon={<CheckBoxOutlineBlank sx={{ fontSize: 14 }} />} endIcon={<ExpandMore sx={{ fontSize: 14 }} />} sx={{ fontSize: "9px", textTransform: "uppercase", fontWeight: 600, height: "28px", px: 1, borderColor: "#d0d0d0", color: "#555", minWidth: "auto", letterSpacing: "0.2px", "&:hover": { borderColor: "#999", backgroundColor: "#fafafa" } }}>
+                  GUARDAR DOCUMENTO
+                </Button>
+              </AutoEditableWrapper>
+
+              <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-limpiar">
+                <Button variant="contained" sx={{ backgroundColor: "#9e9e9e", color: "white", fontSize: "9px", textTransform: "uppercase", fontWeight: 700, height: "28px", px: 1.5, ml: "auto", minWidth: "auto", letterSpacing: "0.3px", "&:hover": { backgroundColor: "#757575" } }}>
+                  LIMPIAR
+                </Button>
+              </AutoEditableWrapper>
+            </Box>
+          </Box>
+
+          {/* Botón Nuevo Artículo */}
+          <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2, borderBottom: "1px solid #e0e0e0" }}>
+            <AutoEditableWrapper isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId="btn-nuevo-articulo">
+              <Button variant="contained" startIcon={<Add sx={{ fontSize: 16 }} />} sx={{ backgroundColor: "#9c27b0", color: "white", fontSize: "10px", textTransform: "uppercase", fontWeight: 700, height: "32px", px: 2, borderRadius: "20px", letterSpacing: "0.3px", "&:hover": { backgroundColor: "#7b1fa2" } }}>
+                NUEVO ARTÍCULO
+              </Button>
+            </AutoEditableWrapper>
+          </Box>
+
+          {/* Tabla */}
+          <TableContainer>
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  {columns.map((column) => (
+                    <TableCell key={column.id} sx={{ backgroundColor: "#1976d2", color: "white", fontWeight: 700, fontSize: "10px", padding: "10px 8px", width: column.width, minWidth: column.width, borderRight: "1px solid rgba(255,255,255,0.12)", textAlign: "center", whiteSpace: "nowrap", letterSpacing: "0.2px", "&:last-child": { borderRight: "none" } }}>
+                      {column.label}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {/* Aquí irían las filas de datos */}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </AutoEditableWrapper>
+
+      {/* Elementos personalizados */}
+      {customElements.map((element) => (
+        <AutoEditableWrapper key={element.id} isEditMode={isEditMode} onSelect={handleSelectElement} customStyles={customStyles} forceId={element.id}>
+          <Box sx={element.styles}>{element.label}</Box>
+        </AutoEditableWrapper>
+      ))}
+
+      {/* Botón flotante para activar modo edición */}
+      <Tooltip title={isEditMode ? "Desactivar modo edición" : "Activar modo edición"}>
+        <Fab color={isEditMode ? "secondary" : "primary"} sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000 }} onClick={() => setIsEditMode(!isEditMode)}>
+          {isEditMode ? <VisibilityOff /> : <Edit />}
+        </Fab>
+      </Tooltip>
+
+      {/* Botón de menú (solo visible en modo edición) */}
+      {isEditMode && (
+        <Tooltip title="Opciones">
+          <Fab size="small" color="default" sx={{ position: "fixed", bottom: 90, right: 24, zIndex: 1000 }} onClick={handleMenuOpen}>
+            <MoreVert />
+          </Fab>
+        </Tooltip>
+      )}
+
+      {/* Menú de opciones */}
+      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleMenuClose}>
+        <MenuItemComp onClick={() => { setCreatorOpen(true); handleMenuClose(); }}>
+          <ListItemIcon><Add fontSize="small" /></ListItemIcon>
+          <ListItemText>Crear Elemento</ListItemText>
+        </MenuItemComp>
+        <Divider />
+        <MenuItemComp onClick={exportStyles}>
+          <ListItemIcon><GetApp fontSize="small" /></ListItemIcon>
+          <ListItemText>Exportar Estilos</ListItemText>
+        </MenuItemComp>
+        <MenuItemComp onClick={handleImportStyles}>
+          <ListItemIcon><Publish fontSize="small" /></ListItemIcon>
+          <ListItemText>Importar Estilos</ListItemText>
+        </MenuItemComp>
+        <Divider />
+        <MenuItemComp onClick={handleResetAll}>
+          <ListItemIcon><RestartAlt fontSize="small" /></ListItemIcon>
+          <ListItemText>Resetear Todo</ListItemText>
+        </MenuItemComp>
+      </Menu>
+
+      {/* Banner de modo edición */}
+      {isEditMode && (
+        <Paper sx={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", px: 3, py: 1.5, backgroundColor: "#1976d2", color: "white", zIndex: 1000, display: "flex", alignItems: "center", gap: 2, boxShadow: 3 }}>
+          <Edit />
+          <Typography variant="body2" fontWeight={600}>
+            MODO EDICIÓN ACTIVADO - Haz clic en cualquier elemento para editarlo
+          </Typography>
+          <Button size="small" variant="contained" color="inherit" onClick={() => setIsEditMode(false)} sx={{ ml: 2 }}>
+            Salir
+          </Button>
+        </Paper>
+      )}
+
+      {/* Editor visual lateral */}
+      <VisualEditor open={editorOpen} onClose={() => setEditorOpen(false)} selectedElement={selectedElement} onUpdate={handleUpdateStyles} onSave={handleSaveStyles} />
+
+      {/* Creador de elementos */}
+      <ElementCreator open={creatorOpen} onClose={() => setCreatorOpen(false)} onCreateElement={handleCreateElement} />
+    </Box>
+  );
+};
+
+export default PromotiveArticulos;
