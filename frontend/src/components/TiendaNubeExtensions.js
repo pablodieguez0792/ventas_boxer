@@ -44,6 +44,8 @@ export function AccountSelector({ onAccountChange }) {
     store_id: '',
     access_token: ''
   });
+  const [editingAccount, setEditingAccount] = useState(null);
+  const [editName, setEditName] = useState('');
 
   useEffect(() => {
     loadAccounts();
@@ -126,6 +128,28 @@ export function AccountSelector({ onAccountChange }) {
     }
   };
 
+  const handleEditName = (account) => {
+    setEditingAccount(account.id);
+    setEditName(account.name);
+  };
+
+  const handleSaveName = async (accountId) => {
+    try {
+      const response = await fetch(`/api/tiendanube/accounts/${accountId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEditingAccount(null);
+        loadAccounts();
+      }
+    } catch (error) {
+      alert('Error al actualizar nombre: ' + error.message);
+    }
+  };
+
   return (
     <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -156,7 +180,26 @@ export function AccountSelector({ onAccountChange }) {
               <ListItemText
                 primary={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {account.name}
+                    {editingAccount === account.id ? (
+                      <TextField
+                        size="small"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onBlur={() => handleSaveName(account.id)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') handleSaveName(account.id);
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <span
+                        onClick={() => handleEditName(account)}
+                        style={{ cursor: 'pointer' }}
+                        title="Click para editar"
+                      >
+                        {account.name}
+                      </span>
+                    )}
                     {account.is_active && <Chip label="Activa" color="success" size="small" />}
                   </Box>
                 }

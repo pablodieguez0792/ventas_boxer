@@ -533,3 +533,46 @@ def delete_account(account_id: int):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get('/accounts/active')
+def get_active_account():
+    """Obtener la cuenta activa actual"""
+    try:
+        account = account_manager.get_active_account()
+        
+        if not account:
+            raise HTTPException(status_code=404, detail="No hay cuenta activa")
+        
+        return {
+            'success': True,
+            'account': {
+                'id': account.id,
+                'name': account.name,
+                'store_id': account.store_id,
+                'is_active': account.is_active,
+                'created_at': account.created_at.isoformat() if account.created_at else None
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put('/accounts/{account_id}')
+def update_account_name(account_id: int, data: dict):
+    """Actualizar nombre de cuenta"""
+    try:
+        account = account_manager.update_account(account_id, name=data.get('name'))
+        
+        if not account:
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
+        
+        return {
+            'success': True,
+            'message': 'Cuenta actualizada',
+            'account': {
+                'id': account.id,
+                'name': account.name,
+                'store_id': account.store_id
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
