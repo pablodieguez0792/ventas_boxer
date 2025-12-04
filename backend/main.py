@@ -14,6 +14,7 @@ from api_routes import router as api_router
 from rsf_routes import router as rsf_router
 from promotive_routes import router as promotive_router
 from tiendanube_routes import router as tiendanube_router
+from mercadolibre_routes import router as mercadolibre_router
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
@@ -125,6 +126,7 @@ app.include_router(api_router)
 app.include_router(rsf_router)
 app.include_router(promotive_router)
 app.include_router(tiendanube_router)
+app.include_router(mercadolibre_router)
 
 # Dependency to get database session
 def get_db():

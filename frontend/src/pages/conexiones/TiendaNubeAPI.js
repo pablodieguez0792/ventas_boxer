@@ -27,6 +27,7 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
+  Checkbox,
 } from '@mui/material';
 import {
   Store,
@@ -71,6 +72,18 @@ const TiendaNubeAPI = () => {
   const [editedProducts, setEditedProducts] = useState({});
   const [updatingProducts, setUpdatingProducts] = useState(false);
   const [updateResults, setUpdateResults] = useState(null);
+
+  // Estados para MercadoLibre
+  const [mlConnected, setMlConnected] = useState(false);
+  const [mlItems, setMlItems] = useState([]);
+  const [loadingMlItems, setLoadingMlItems] = useState(false);
+  const [mlUserInfo, setMlUserInfo] = useState(null);
+  const [verifyingMlConnection, setVerifyingMlConnection] = useState(false);
+  const [mlConnectionStatus, setMlConnectionStatus] = useState(null);
+  const [mlMappedItems, setMlMappedItems] = useState([]);
+  const [selectedMlItems, setSelectedMlItems] = useState([]);
+  const [migratingToTN, setMigratingToTN] = useState(false);
+  const [migrationResults, setMigrationResults] = useState(null);
 
   // Endpoints disponibles
   const endpoints = [
@@ -501,6 +514,174 @@ const TiendaNubeAPI = () => {
     }
   };
 
+  // Funciones de MercadoLibre
+  const handleVerifyMlConnection = async () => {
+    setVerifyingMlConnection(true);
+    try {
+      const response = await fetch('/api/mercadolibre/verify-connection', {
+        method: 'POST'
+      });
+      const data = await response.json();
+      
+      setMlConnectionStatus(data);
+      setMlConnected(data.connected);
+      
+      if (data.user_info) {
+        setMlUserInfo(data.user_info);
+      }
+      
+      // No usar alert para evitar que cambie de pestaña
+      console.log('[ML] Verificación completada:', data);
+      
+    } catch (error) {
+      console.error('Error verifying ML connection:', error);
+      setMlConnectionStatus({
+        connected: false,
+        message: 'Error al verificar conexión: ' + error.message,
+        token_renewed: false
+      });
+    } finally {
+      setVerifyingMlConnection(false);
+    }
+  };
+
+  const handleLoadMlItems = async () => {
+    setLoadingMlItems(true);
+    try {
+      // Obtener estado de conexión
+      const statusResponse = await fetch('/api/mercadolibre/status');
+      const statusData = await statusResponse.json();
+      setMlConnected(statusData.connected);
+      
+      if (statusData.user_info) {
+        setMlUserInfo(statusData.user_info);
+      }
+
+      if (!statusData.connected) {
+        alert('No hay conexión con MercadoLibre');
+        return;
+      }
+
+      // Obtener publicaciones MAPEADAS para Tienda Nube
+      console.log('[ML] Solicitando items-for-tiendanube...');
+      const itemsResponse = await fetch('/api/mercadolibre/items-for-tiendanube?limit=50&status=active');
+      const itemsData = await itemsResponse.json();
+      
+      console.log('[ML] Respuesta completa del servidor:', itemsData);
+
+      if (itemsData.success) {
+        const mappedItems = itemsData.data.items || [];
+        const originalItems = itemsData.data.original_items || [];
+        
+        console.log('[ML] Mapped items extraídos:', mappedItems);
+        console.log('[ML] Original items extraídos:', originalItems);
+        console.log('[ML] Cantidad mapped:', mappedItems.length);
+        console.log('[ML] Cantidad original:', originalItems.length);
+        
+        setMlMappedItems(mappedItems);
+        setMlItems(originalItems);
+        
+        console.log(`[ML] Estado actualizado - mlMappedItems tendrá ${mappedItems.length} items`);
+        
+        alert(`✅ ${mappedItems.length} publicaciones cargadas y mapeadas para Tienda Nube`);
+      } else {
+        console.error('[ML] Error en respuesta:', itemsData);
+        alert('Error al cargar publicaciones: ' + (itemsData.message || 'Error desconocido'));
+      }
+    } catch (error) {
+      console.error('Error loading ML items:', error);
+      alert('Error al cargar publicaciones de MercadoLibre');
+    } finally {
+      setLoadingMlItems(false);
+    }
+  };
+
+  const handleSelectMlItem = (mlId) => {
+    setSelectedMlItems(prev => {
+      if (prev.includes(mlId)) {
+        return prev.filter(id => id !== mlId);
+      } else {
+        return [...prev, mlId];
+      }
+    });
+  };
+
+  const handleSelectAllMlItems = () => {
+    if (selectedMlItems.length === mlMappedItems.length) {
+      setSelectedMlItems([]);
+    } else {
+      setSelectedMlItems(mlMappedItems.map(item => item.ml_id));
+    }
+  };
+
+  const handleMigrateToTiendaNube = async () => {
+    if (selectedMlItems.length === 0) {
+      alert('Por favor selecciona al menos un producto para migrar');
+      return;
+    }
+
+    const confirm = window.confirm(
+      `¿Estás seguro de migrar ${selectedMlItems.length} productos a Tienda Nube?\n\n` +
+      'Esto creará nuevos productos en tu tienda.'
+    );
+
+    if (!confirm) return;
+
+    setMigratingToTN(true);
+    const results = { total: selectedMlItems.length, created: 0, errors: [] };
+
+    try {
+      for (const mlId of selectedMlItems) {
+        const mappedItem = mlMappedItems.find(item => item.ml_id === mlId);
+        
+        if (!mappedItem) continue;
+
+        try {
+          // Crear producto en Tienda Nube
+          const response = await fetch('/api/tiendanube/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mappedItem),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            results.created++;
+            console.log(`[TN] Producto creado: ${mappedItem.name.es}`, data.data);
+          } else {
+            throw new Error(data.message || 'Error desconocido');
+          }
+        } catch (error) {
+          results.errors.push({
+            ml_id: mlId,
+            name: mappedItem.name.es,
+            error: error.message
+          });
+          console.error(`[TN] Error creando ${mappedItem.name.es}:`, error);
+        }
+      }
+
+      setMigrationResults(results);
+      
+      const message = `✅ Migración completada!\n\n` +
+        `Total: ${results.total}\n` +
+        `Creados: ${results.created}\n` +
+        `Errores: ${results.errors.length}`;
+      
+      alert(message);
+      
+      // Limpiar selección
+      setSelectedMlItems([]);
+      
+    } catch (error) {
+      console.error('Error en migración:', error);
+      alert('Error durante la migración');
+    } finally {
+      setMigratingToTN(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -523,6 +704,7 @@ const TiendaNubeAPI = () => {
           <Tab label="Endpoints" icon={<Api />} iconPosition="start" />
           <Tab label="Agregar Producto" icon={<Inventory />} iconPosition="start" />
           <Tab label="Sincronizar Stock" icon={<CloudSync />} iconPosition="start" />
+          <Tab label="MercadoLibre" icon={<ShoppingCart />} iconPosition="start" />
         </Tabs>
       </Box>
 
@@ -1033,6 +1215,302 @@ const TiendaNubeAPI = () => {
                   </Box>
                 )}
               </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tab: MercadoLibre */}
+      {tabValue === 4 && (
+        <Card>
+          <CardContent>
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="h5" gutterBottom>
+                    Publicaciones de MercadoLibre
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Obtén hasta 50 publicaciones activas con todos sus datos
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleVerifyMlConnection}
+                    disabled={verifyingMlConnection}
+                    startIcon={verifyingMlConnection ? <CircularProgress size={20} /> : <CheckCircle />}
+                  >
+                    {verifyingMlConnection ? 'Verificando...' : 'Verificar Conexión'}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleLoadMlItems}
+                    disabled={loadingMlItems}
+                    startIcon={loadingMlItems ? <CircularProgress size={20} /> : <ShoppingCart />}
+                  >
+                    {loadingMlItems ? 'Cargando...' : 'Cargar Publicaciones'}
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Estado de conexión */}
+              {mlConnectionStatus && (
+                <Alert 
+                  severity={mlConnectionStatus.connected ? 'success' : 'error'} 
+                  sx={{ mb: 2 }}
+                >
+                  <Typography variant="body2">
+                    <strong>Estado:</strong> {mlConnectionStatus.message}
+                  </Typography>
+                  {mlConnectionStatus.token_renewed && (
+                    <Typography variant="body2" sx={{ mt: 1, color: 'success.dark' }}>
+                      🔄 Token renovado automáticamente
+                    </Typography>
+                  )}
+                  {mlConnectionStatus.expires_at && (
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      Expira: {new Date(mlConnectionStatus.expires_at).toLocaleString('es-AR')}
+                    </Typography>
+                  )}
+                </Alert>
+              )}
+            </Box>
+
+            {/* Estado de conexión ML */}
+            {mlUserInfo && (
+              <Alert severity="success" sx={{ mb: 3 }}>
+                <Typography variant="body2">
+                  <strong>Usuario:</strong> {mlUserInfo.nickname} ({mlUserInfo.id})
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Email:</strong> {mlUserInfo.email}
+                </Typography>
+              </Alert>
+            )}
+
+            {/* Tabla de publicaciones con checkboxes para migrar */}
+            {mlMappedItems.length > 0 && (
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, mt: 3 }}>
+                  <Typography variant="h6">
+                    📦 Productos para Migrar ({selectedMlItems.length} de {mlMappedItems.length} seleccionados)
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={handleSelectAllMlItems}
+                    >
+                      {selectedMlItems.length === mlMappedItems.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      onClick={handleMigrateToTiendaNube}
+                      disabled={migratingToTN || selectedMlItems.length === 0}
+                      startIcon={migratingToTN ? <CircularProgress size={20} /> : <CloudSync />}
+                      size="large"
+                    >
+                      {migratingToTN ? 'Migrando...' : `🚀 Migrar ${selectedMlItems.length} a Tienda Nube`}
+                    </Button>
+                  </Box>
+                </Box>
+
+                <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={selectedMlItems.length === mlMappedItems.length && mlMappedItems.length > 0}
+                            indeterminate={selectedMlItems.length > 0 && selectedMlItems.length < mlMappedItems.length}
+                            onChange={handleSelectAllMlItems}
+                          />
+                        </TableCell>
+                        <TableCell><strong>ML ID</strong></TableCell>
+                        <TableCell><strong>Nombre</strong></TableCell>
+                        <TableCell><strong>Precio</strong></TableCell>
+                        <TableCell><strong>Precio Promo</strong></TableCell>
+                        <TableCell><strong>Stock</strong></TableCell>
+                        <TableCell><strong>SKU</strong></TableCell>
+                        <TableCell><strong>Imágenes</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {mlMappedItems.map((item) => (
+                        <TableRow 
+                          key={item.ml_id}
+                          hover
+                          selected={selectedMlItems.includes(item.ml_id)}
+                          sx={{ 
+                            cursor: 'pointer',
+                            '&.Mui-selected': {
+                              backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                            }
+                          }}
+                          onClick={() => handleSelectMlItem(item.ml_id)}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={selectedMlItems.includes(item.ml_id)}
+                              onChange={() => handleSelectMlItem(item.ml_id)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <a 
+                              href={item.ml_permalink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: '#1976d2', textDecoration: 'none' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {item.ml_id}
+                            </a>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ maxWidth: 300 }}>
+                              {item.name.es}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                              ${parseFloat(item.variants[0].price).toLocaleString('es-AR')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {item.variants[0].promotional_price ? (
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main' }}>
+                                ${parseFloat(item.variants[0].promotional_price).toLocaleString('es-AR')}
+                              </Typography>
+                            ) : (
+                              <Typography variant="caption" color="text.secondary">-</Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={item.variants[0].stock}
+                              size="small"
+                              color={item.variants[0].stock > 0 ? 'success' : 'error'}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">
+                              {item.variants[0].sku}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={`${item.images?.length || 0} fotos`}
+                              size="small"
+                              variant="outlined"
+                              color="primary"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* Resultados de migración */}
+                {migrationResults && (
+                  <Alert severity={migrationResults.errors.length === 0 ? 'success' : 'warning'} sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>✅ Migración completada:</strong> {migrationResults.created} de {migrationResults.total} productos creados en Tienda Nube
+                    </Typography>
+                    {migrationResults.errors.length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        <Typography variant="caption" display="block"><strong>⚠️ Errores:</strong></Typography>
+                        {migrationResults.errors.slice(0, 5).map((err, idx) => (
+                          <Typography key={idx} variant="caption" display="block">
+                            • {err.name}: {err.error}
+                          </Typography>
+                        ))}
+                      </Box>
+                    )}
+                  </Alert>
+                )}
+              </Box>
+            )}
+
+            {/* Detalles expandibles */}
+            {mlItems.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Detalles de Publicaciones
+                </Typography>
+                {mlItems.slice(0, 5).map((item) => (
+                  <Accordion key={item.id}>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography>{item.title}</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="body2"><strong>ID:</strong> {item.id}</Typography>
+                          <Typography variant="body2"><strong>SKU:</strong> {item.seller_custom_field || 'N/A'}</Typography>
+                          <Typography variant="body2"><strong>Precio:</strong> ${item.price?.toLocaleString('es-AR')}</Typography>
+                          <Typography variant="body2"><strong>Stock:</strong> {item.available_quantity}</Typography>
+                          <Typography variant="body2"><strong>Vendidos:</strong> {item.sold_quantity}</Typography>
+                          <Typography variant="body2"><strong>Condición:</strong> {item.condition}</Typography>
+                          <Typography variant="body2"><strong>Estado:</strong> {item.status}</Typography>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="body2"><strong>Categoría:</strong> {item.category_id}</Typography>
+                          <Typography variant="body2"><strong>Tipo de listado:</strong> {item.listing_type_id}</Typography>
+                          <Typography variant="body2"><strong>Garantía:</strong> {item.warranty || 'Sin garantía'}</Typography>
+                          <Typography variant="body2"><strong>Envío gratis:</strong> {item.shipping?.free_shipping ? 'Sí' : 'No'}</Typography>
+                          <Typography variant="body2"><strong>Modo:</strong> {item.shipping?.mode || 'N/A'}</Typography>
+                          {item.permalink && (
+                            <Typography variant="body2">
+                              <strong>Link:</strong>{' '}
+                              <a href={item.permalink} target="_blank" rel="noopener noreferrer">
+                                Ver publicación
+                              </a>
+                            </Typography>
+                          )}
+                        </Grid>
+                        {item.pictures && item.pictures.length > 0 && (
+                          <Grid item xs={12}>
+                            <Typography variant="body2" gutterBottom><strong>Imágenes:</strong></Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              {item.pictures.slice(0, 3).map((pic, idx) => (
+                                <img 
+                                  key={idx}
+                                  src={pic.secure_url || pic.url} 
+                                  alt={`Imagen ${idx + 1}`}
+                                  style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4 }}
+                                />
+                              ))}
+                            </Box>
+                          </Grid>
+                        )}
+                        {item.attributes && item.attributes.length > 0 && (
+                          <Grid item xs={12}>
+                            <Typography variant="body2" gutterBottom><strong>Atributos:</strong></Typography>
+                            <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                              {item.attributes.map((attr, idx) => (
+                                <Typography key={idx} variant="caption" display="block">
+                                  • {attr.name}: {attr.value_name || attr.value_struct?.number || 'N/A'}
+                                </Typography>
+                              ))}
+                            </Box>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </Box>
+            )}
+
+            {mlMappedItems.length === 0 && !loadingMlItems && (
+              <Alert severity="info">
+                Haz clic en "Cargar Publicaciones" para obtener tus publicaciones de MercadoLibre
+              </Alert>
             )}
           </CardContent>
         </Card>
