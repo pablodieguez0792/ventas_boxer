@@ -4,6 +4,7 @@ Servicio para interactuar con la API de MercadoLibre.
 
 import requests
 import json
+import re
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from mercadolibre_config import (
@@ -327,9 +328,104 @@ class MercadoLibreService:
                 for pic in ml_item['pictures'][:10]  # Máximo 10 imágenes
             ]
         
-        # Obtener shipping de forma segura
+        # Obtener shipping y dimensiones de forma segura
         shipping = ml_item.get('shipping') or {}
         dimensions = shipping.get('dimensions') or {}
+        
+        item_id = ml_item.get('id')
+        
+        # Extraer dimensiones de shipping.dimensions
+        weight = dimensions.get('weight')
+        width = dimensions.get('width')
+        height = dimensions.get('height')
+        length = dimensions.get('length')
+        
+        # Si no hay dimensiones en shipping, buscar en attributes
+        if not (weight or width or height or length):
+            attributes = ml_item.get('attributes', [])
+            for attr in attributes:
+                attr_id = attr.get('id')
+                attr_name = attr.get('name', '')
+                attr_value_name = attr.get('value_name')
+                attr_value_struct = attr.get('value_struct', {})
+                
+                # Intentar obtener el valor numérico
+                try:
+                    if attr_value_struct and 'number' in attr_value_struct:
+                        attr_value = float(attr_value_struct['number'])
+                        unit = attr_value_struct.get('unit', '')
+                    elif attr_value_name:
+                        # Extraer número del string (ej: "20 g" -> 20)
+                        match = re.search(r'([\d.]+)', str(attr_value_name))
+                        if match:
+                            attr_value = float(match.group(1))
+                            unit = attr_value_name.replace(match.group(1), '').strip()
+                        else:
+                            continue
+                    else:
+                        continue
+                    
+                    # Buscar peso (puede estar en g o kg)
+                    if attr_id in ['WEIGHT', 'PACKAGE_WEIGHT'] or 'Peso' in attr_name:
+                        if 'g' in unit.lower() and 'kg' not in unit.lower():
+                            weight = attr_value / 1000  # Convertir g a kg
+                            print(f"[ML] ✓ Peso encontrado: {attr_value}g = {weight}kg")
+                        else:
+                            weight = attr_value
+                            print(f"[ML] ✓ Peso encontrado: {weight}kg")
+                    
+                    # Buscar ancho
+                    elif attr_id in ['WIDTH', 'PACKAGE_WIDTH'] or 'Ancho' in attr_name:
+                        width = attr_value
+                        print(f"[ML] ✓ Ancho encontrado: {width}cm")
+                    
+                    # Buscar alto/altura
+                    elif attr_id in ['HEIGHT', 'PACKAGE_HEIGHT'] or 'Altura' in attr_name or 'Alto' in attr_name:
+                        height = attr_value
+                        print(f"[ML] ✓ Alto encontrado: {height}cm")
+                    
+                    # Buscar largo/profundidad
+                    elif attr_id in ['LENGTH', 'DEPTH', 'PACKAGE_LENGTH'] or 'Largo' in attr_name or 'Profundidad' in attr_name:
+                        length = attr_value
+                        print(f"[ML] ✓ Largo encontrado: {length}cm")
+                        
+                except Exception as e:
+                    continue
+        
+        # Log de dimensiones finales
+        if weight or width or height or length:
+            print(f"[ML] ✓ Item {item_id}: peso={weight}kg, ancho={width}cm, alto={height}cm, largo={length}cm")
+        else:
+            print(f"[ML] ⚠ Item {item_id} NO tiene dimensiones")
+        
+        # Preparar variante con dimensiones
+        variant = {
+            'price': str(ml_item.get('price', 0)),
+            'promotional_price': str(ml_item.get('original_price')) if ml_item.get('original_price') and ml_item.get('original_price') > ml_item.get('price', 0) else None,
+            'stock': ml_item.get('available_quantity', 0),
+            'sku': ml_item.get('seller_custom_field') or ml_item.get('id'),
+        }
+        
+        # Agregar peso si existe (Tienda Nube lo requiere en kg)
+        if weight:
+            variant['weight'] = str(weight)
+            print(f"[ML→TN] ✓ Agregando peso: {weight} kg")
+        else:
+            variant['weight'] = '0.5'  # Peso por defecto si no está disponible
+            print(f"[ML→TN] ⚠ Sin peso, usando default: 0.5 kg")
+        
+        # Agregar dimensiones si existen (Tienda Nube las requiere en cm)
+        if width:
+            variant['width'] = str(width)
+            print(f"[ML→TN] ✓ Agregando ancho: {width} cm")
+        if height:
+            variant['height'] = str(height)
+            print(f"[ML→TN] ✓ Agregando alto: {height} cm")
+        if length:
+            variant['depth'] = str(length)  # Tienda Nube usa 'depth' en lugar de 'length'
+            print(f"[ML→TN] ✓ Agregando profundidad: {length} cm")
+        
+        print(f"[ML→TN] Variante final para {item_id}: {variant}")
         
         # Preparar datos para Tienda Nube
         tiendanube_product = {
@@ -337,13 +433,7 @@ class MercadoLibreService:
             'description': {'es': description},
             'published': ml_item.get('status') == 'active',
             'free_shipping': shipping.get('free_shipping', False),
-            'variants': [{
-                'price': str(ml_item.get('price', 0)),
-                'promotional_price': str(ml_item.get('original_price')) if ml_item.get('original_price') and ml_item.get('original_price') > ml_item.get('price', 0) else None,
-                'stock': ml_item.get('available_quantity', 0),
-                'sku': ml_item.get('seller_custom_field') or ml_item.get('id'),
-                'weight': str(dimensions.get('weight', 0.5)),
-            }],
+            'variants': [variant],
             'images': images,
             # Metadata adicional
             'seo_title': {'es': ml_item.get('title', '')[:70]},  # Máximo 70 caracteres

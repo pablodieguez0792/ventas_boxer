@@ -1336,6 +1336,8 @@ const TiendaNubeAPI = () => {
                         <TableCell><strong>Precio Promo</strong></TableCell>
                         <TableCell><strong>Stock</strong></TableCell>
                         <TableCell><strong>SKU</strong></TableCell>
+                        <TableCell><strong>Peso (kg)</strong></TableCell>
+                        <TableCell><strong>Dimensiones (cm)</strong></TableCell>
                         <TableCell><strong>Imágenes</strong></TableCell>
                       </TableRow>
                     </TableHead>
@@ -1399,6 +1401,20 @@ const TiendaNubeAPI = () => {
                           <TableCell>
                             <Typography variant="caption">
                               {item.variants[0].sku}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {item.variants[0].weight || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption" sx={{ display: 'block' }}>
+                              {item.variants[0].width && item.variants[0].height && item.variants[0].depth ? (
+                                `${item.variants[0].width} × ${item.variants[0].height} × ${item.variants[0].depth}`
+                              ) : (
+                                '-'
+                              )}
                             </Typography>
                           </TableCell>
                           <TableCell>

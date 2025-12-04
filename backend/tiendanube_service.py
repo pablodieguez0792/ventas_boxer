@@ -145,7 +145,11 @@ class TiendaNubeService:
     
     def create_product(self, product_data):
         """Crea un nuevo producto"""
-        return self._make_request('POST', 'products', data=product_data)
+        print(f"[TN] Creando producto: {product_data.get('name', {}).get('es', 'Sin nombre')}")
+        print(f"[TN] Variante a enviar: {product_data.get('variants', [{}])[0]}")
+        result = self._make_request('POST', 'products', data=product_data)
+        print(f"[TN] Producto creado con ID: {result.get('id')}")
+        return result
     
     def update_product(self, product_id, product_data):
         """Actualiza un producto existente"""
