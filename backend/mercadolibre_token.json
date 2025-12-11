@@ -1,9 +1,9 @@
 {
-    "access_token": "APP_USR-4931374040797178-120414-4d1a8d438c3d121603ca572866fc7dfa-403794231",
+    "access_token": "APP_USR-4931374040797178-121109-d19ae0c39faf53c21409299dedbc1176-403794231",
     "token_type": "Bearer",
     "expires_in": 21600,
     "scope": "offline_access read urn:global:admin:oauth:/read-only urn:ml:all:publish-sync:/read-only urn:ml:mktp:invoices:/read-only urn:ml:mktp:invoices:/read-write urn:ml:mktp:offers:/read-write urn:ml:mktp:orders-shipments:/read-only urn:ml:mktp:publish-sync:/read-write write",
     "user_id": 403794231,
-    "refresh_token": "TG-6931d0ad7aa1ad000196d0d5-403794231",
-    "expires_at": 1764893959.625522
+    "refresh_token": "TG-693ac7361efa0f0001555287-403794231",
+    "expires_at": 1765481366.268312
 }

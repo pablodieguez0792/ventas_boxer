@@ -47,6 +47,7 @@ import {
   Link as LinkIcon,
 } from '@mui/icons-material';
 import { AccountSelector, BulkProductUpload, BulkStockUpdate } from '../../components/TiendaNubeExtensions';
+import { MLAccountSelector } from '../../components/MercadoLibreExtensions';
 
 const TiendaNubeAPI = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -1243,28 +1244,32 @@ const TiendaNubeAPI = () => {
 
       {/* Tab: MercadoLibre */}
       {tabValue === 4 && (
-        <Card>
-          <CardContent>
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box>
-                  <Typography variant="h5" gutterBottom>
-                    Publicaciones de MercadoLibre
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Obtén hasta 50 publicaciones activas con todos sus datos
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={handleVerifyMlConnection}
-                    disabled={verifyingMlConnection}
-                    startIcon={verifyingMlConnection ? <CircularProgress size={20} /> : <CheckCircle />}
-                  >
-                    {verifyingMlConnection ? 'Verificando...' : 'Verificar Conexión'}
-                  </Button>
+        <Box>
+          {/* Selector de Cuentas ML */}
+          <MLAccountSelector />
+
+          <Card>
+            <CardContent>
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box>
+                    <Typography variant="h5" gutterBottom>
+                      Publicaciones de MercadoLibre
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Obtén hasta 50 publicaciones activas con todos sus datos
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      onClick={handleVerifyMlConnection}
+                      disabled={verifyingMlConnection}
+                      startIcon={verifyingMlConnection ? <CircularProgress size={20} /> : <CheckCircle />}
+                    >
+                      {verifyingMlConnection ? 'Verificando...' : 'Verificar Conexión'}
+                    </Button>
                   <Button
                     variant="contained"
                     color="primary"
@@ -1551,6 +1556,7 @@ const TiendaNubeAPI = () => {
             )}
           </CardContent>
         </Card>
+        </Box>
       )}
     </Box>
   );

@@ -6,8 +6,10 @@ from fastapi import APIRouter, HTTPException
 from typing import Optional
 from mercadolibre_service import mercadolibre_service
 from mercadolibre_config import MERCADOLIBRE_CONFIG
+from mercadolibre_accounts import MercadoLibreAccountManager
 
 router = APIRouter(prefix='/api/mercadolibre', tags=['MercadoLibre'])
+account_manager = MercadoLibreAccountManager()
 
 @router.get('/status')
 def get_status():
@@ -158,6 +160,134 @@ def get_auth_url():
                 '3. Copia el código de la URL de redirección',
                 '4. Usa el endpoint /mercadolibre/exchange-code para obtener el token'
             ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== GESTIÓN DE CUENTAS ====================
+
+@router.get('/accounts')
+def get_accounts():
+    """Obtener todas las cuentas de MercadoLibre"""
+    try:
+        accounts = account_manager.get_all_accounts()
+        return {
+            'success': True,
+            'accounts': [
+                {
+                    'id': acc.id,
+                    'name': acc.name,
+                    'user_id': acc.user_id,
+                    'is_active': acc.is_active,
+                    'created_at': acc.created_at.isoformat() if acc.created_at else None
+                }
+                for acc in accounts
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post('/accounts')
+def add_account(data: dict):
+    """Agregar una nueva cuenta de MercadoLibre"""
+    try:
+        account = account_manager.add_account(
+            name=data.get('name'),
+            user_id=data.get('user_id'),
+            access_token=data.get('access_token'),
+            refresh_token=data.get('refresh_token'),
+            expires_at=data.get('expires_at')
+        )
+        
+        return {
+            'success': True,
+            'message': 'Cuenta agregada exitosamente',
+            'account': {
+                'id': account.id,
+                'name': account.name,
+                'user_id': account.user_id,
+                'is_active': account.is_active
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put('/accounts/{account_id}/activate')
+def activate_account(account_id: int):
+    """Activar una cuenta específica"""
+    try:
+        account = account_manager.set_active_account(account_id)
+        
+        if not account:
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
+        
+        return {
+            'success': True,
+            'message': 'Cuenta activada',
+            'account': {
+                'id': account.id,
+                'name': account.name,
+                'user_id': account.user_id
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete('/accounts/{account_id}')
+def delete_account(account_id: int):
+    """Eliminar una cuenta"""
+    try:
+        success = account_manager.delete_account(account_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada o está activa")
+        
+        return {
+            'success': True,
+            'message': 'Cuenta eliminada exitosamente'
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get('/accounts/active')
+def get_active_account():
+    """Obtener la cuenta activa actual"""
+    try:
+        account = account_manager.get_active_account()
+        
+        if not account:
+            raise HTTPException(status_code=404, detail="No hay cuenta activa")
+        
+        return {
+            'success': True,
+            'account': {
+                'id': account.id,
+                'name': account.name,
+                'user_id': account.user_id,
+                'is_active': account.is_active,
+                'created_at': account.created_at.isoformat() if account.created_at else None
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put('/accounts/{account_id}')
+def update_account_name(account_id: int, data: dict):
+    """Actualizar nombre de cuenta"""
+    try:
+        account = account_manager.update_account(account_id, name=data.get('name'))
+        
+        if not account:
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
+        
+        return {
+            'success': True,
+            'message': 'Cuenta actualizada',
+            'account': {
+                'id': account.id,
+                'name': account.name,
+                'user_id': account.user_id
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
