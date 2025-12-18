@@ -76,7 +76,7 @@ const TiendaNubeAPI = () => {
   const [updateResults, setUpdateResults] = useState(null);
 
   // Estados para MercadoLibre
-  const [mlConnected, setMlConnected] = useState(false);
+  const [, setMlConnected] = useState(false);
   const [mlItems, setMlItems] = useState([]);
   const [loadingMlItems, setLoadingMlItems] = useState(false);
   const [mlUserInfo, setMlUserInfo] = useState(null);
@@ -717,7 +717,7 @@ const TiendaNubeAPI = () => {
           <Grid item xs={12}>
             <AccountSelector onAccountChange={(account) => {
               console.log('Cuenta cambiada:', account);
-              checkConnection();
+              checkConnectionStatus();
             }} />
           </Grid>
 

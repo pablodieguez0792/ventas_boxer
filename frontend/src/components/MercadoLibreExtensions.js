@@ -19,11 +19,9 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
 
 export function MLAccountSelector({ onAccountChange }) {
   const [accounts, setAccounts] = useState([]);
-  const [activeAccount, setActiveAccount] = useState(null);
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [newAccount, setNewAccount] = useState({
@@ -37,6 +35,7 @@ export function MLAccountSelector({ onAccountChange }) {
 
   useEffect(() => {
     loadAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadAccounts = async () => {
@@ -46,7 +45,6 @@ export function MLAccountSelector({ onAccountChange }) {
       if (data.success) {
         setAccounts(data.accounts);
         const active = data.accounts.find(acc => acc.is_active);
-        setActiveAccount(active);
         if (onAccountChange && active) {
           onAccountChange(active);
         }
