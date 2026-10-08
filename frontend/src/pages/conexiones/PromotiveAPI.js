@@ -33,6 +33,7 @@ import {
   Stack,
   Collapse,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   Business,
@@ -58,13 +59,15 @@ import {
   ArrowBackIos,
   ArrowForwardIos,
   FiberManualRecord,
+  ContentCopy,
+  FileDownload,
 } from "@mui/icons-material";
 
 const PromotiveAPI = () => {
   const [isConnected, setIsConnected] = useState(false);
-  const [clientId, setClientId] = useState("8e4aa28708151c851ddceb70bd5cc8be");
+  const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState(
-    "45bd24d82eba8b8194d2c7fff2db027eb006768fc8241c2810f51daa716f8895"
+    ""
   );
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -76,6 +79,10 @@ const PromotiveAPI = () => {
   const [vehicleData, setVehicleData] = useState(null);
   const [loadingVehicle, setLoadingVehicle] = useState(false);
   const [includePartes, setIncludePartes] = useState(false);
+  const [partsCopied, setPartsCopied] = useState(false);
+  // Estado del chequeo "¿está en nuestro catálogo?" por fila de la tabla de
+  // partes compatibles. Clave: índice de la fila. Valor: { status: 'loading'|'found'|'not_found'|'error', matches }
+  const [catalogChecks, setCatalogChecks] = useState({});
 
   // Estados para búsqueda de artículos
   const [searchTerm, setSearchTerm] = useState("");
@@ -143,6 +150,7 @@ const PromotiveAPI = () => {
 
     setLoadingVehicle(true);
     setVehicleData(null);
+    setCatalogChecks({});
 
     try {
       const params = new URLSearchParams({
@@ -163,6 +171,69 @@ const PromotiveAPI = () => {
       alert("Error en la búsqueda");
     } finally {
       setLoadingVehicle(false);
+    }
+  };
+
+  const handleCopyPartCodes = () => {
+    const parts = vehicleData?.compatible_parts || [];
+    if (parts.length === 0) return;
+    const text = parts.map((p) => p.code || p.safe_code || "").filter(Boolean).join(String.fromCharCode(10));
+    navigator.clipboard.writeText(text).then(() => {
+      setPartsCopied(true);
+      setTimeout(() => setPartsCopied(false), 2000);
+    });
+  };
+
+  const handleExportPartsCsv = () => {
+    const parts = vehicleData?.compatible_parts || [];
+    if (parts.length === 0) return;
+    const NL = String.fromCharCode(10);
+    const header = "Categoria,Producto,Marca,Codigo" + NL;
+    const rows = parts
+      .map((p) => {
+        const cells = [p.category, p.product, p.brand, p.code].map((v) => {
+          const val = (v || "").toString().replace(/"/g, '""');
+          return `"${val}"`;
+        });
+        return cells.join(",");
+      })
+      .join(NL);
+    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const vehicleLabel = [
+      vehicleData?.basic_info?.brand,
+      vehicleData?.basic_info?.master_model || vehicleData?.basic_info?.model,
+    ]
+      .filter(Boolean)
+      .join("_")
+      .replace(/\s+/g, "_") || "vehiculo";
+    link.href = url;
+    link.download = `repuestos_${vehicleLabel}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const checkPartInCatalog = async (rowIndex, code, brand) => {
+    if (!code) return;
+    setCatalogChecks((prev) => ({ ...prev, [rowIndex]: { status: "loading" } }));
+    try {
+      const params = new URLSearchParams({ code });
+      if (brand) params.set("brand", brand);
+      const response = await fetch(`/api/products/check-code?${params}`);
+      const data = await response.json();
+      setCatalogChecks((prev) => ({
+        ...prev,
+        [rowIndex]: {
+          status: data.found ? "found" : "not_found",
+          matches: data.matches || [],
+        },
+      }));
+    } catch (error) {
+      console.error("Error verificando código en catálogo:", error);
+      setCatalogChecks((prev) => ({ ...prev, [rowIndex]: { status: "error" } }));
     }
   };
 
@@ -884,10 +955,113 @@ const PromotiveAPI = () => {
                 </Accordion>
               )}
 
+              {/* Ficha completa de cada parte exacta */}
+              {vehicleData.parts_detail && vehicleData.parts_detail.length > 0 && (
+                <Accordion defaultExpanded>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="subtitle1">
+                      Ficha completa de las partes ({vehicleData.parts_detail.length})
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    {vehicleData.parts_detail.map((d) => {
+                      const bi = vehicleData.basic_info || {};
+                      const fits = (d.vehicles || []).filter(
+                        (v) => v.model === bi.model && v.version === bi.version
+                      );
+                      return (
+                        <Paper key={d.id} variant="outlined" sx={{ p: 2, mb: 2 }}>
+                          <Typography variant="h6">
+                            {d.brand} {d.code}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            {d.category} · {d.product}
+                            {d.description ? ` · ${d.description}` : ""}
+                          </Typography>
+                          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
+                            <Chip size="small" label={`ID ${d.id}`} />
+                            {d.is_kit ? <Chip size="small" label="Kit" /> : null}
+                            {d.oem ? <Chip size="small" label="OEM" /> : null}
+                            {d.discontinued ? <Chip size="small" color="warning" label="Discontinuado" /> : null}
+                            {d.national_industry ? <Chip size="small" label="Industria nacional" /> : null}
+                            {(d.ean || []).map((e) => (
+                              <Chip key={e} size="small" variant="outlined" label={`EAN ${e}`} />
+                            ))}
+                          </Box>
+                          {d.observation && (
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              Observación: {d.observation}
+                            </Typography>
+                          )}
+                          {["package_weight", "package_length", "package_width", "package_height"].some((k) => d[k]) && (
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              Embalaje: peso {d.package_weight ?? "-"} · largo {d.package_length ?? "-"} ·
+                              ancho {d.package_width ?? "-"} · alto {d.package_height ?? "-"}
+                            </Typography>
+                          )}
+                          {(d.pictures || []).length > 0 && (
+                            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
+                              {d.pictures.map((pic, i) => (
+                                <a key={i} href={pic.image_url} target="_blank" rel="noreferrer">
+                                  <img src={pic.image_url} alt={d.code} style={{ height: 90, borderRadius: 4 }} />
+                                </a>
+                              ))}
+                            </Box>
+                          )}
+                          {(d.attributes || []).length > 0 && (
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              <b>Atributos:</b>{" "}
+                              {d.attributes.map((a) => `${a.name}: ${a.value}${a.unit ? " " + a.unit : ""}`).join(" · ")}
+                            </Typography>
+                          )}
+                          {(d.components || []).length > 0 && (
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              <b>Componentes:</b>{" "}
+                              {d.components.map((c) => `${c.product} (${c.brand} ${c.code})`).join(" · ")}
+                            </Typography>
+                          )}
+                          {(d.links || []).length > 0 && (
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              <b>Links:</b>{" "}
+                              {d.links.map((l, i) => (
+                                <a key={i} href={l.link} target="_blank" rel="noreferrer" style={{ marginRight: 8 }}>
+                                  {l.link}
+                                </a>
+                              ))}
+                            </Typography>
+                          )}
+                          {(d.cross || []).length > 0 && (
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              <b>Referencias cruzadas ({d.cross.length}):</b>{" "}
+                              {d.cross.map((c) => `${c.brand} ${c.code}`).join(" · ")}
+                            </Typography>
+                          )}
+                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                            <b>
+                              Aplica a este vehículo ({bi.master_model} {bi.model} {bi.version}):
+                            </b>{" "}
+                            {fits.length > 0 ? "Sí" : "No figura en la lista de aplicaciones"}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            <b>Vehículos compatibles ({(d.vehicles || []).length}):</b>{" "}
+                            {(d.vehicles || [])
+                              .map(
+                                (v) =>
+                                  `${v.brand} ${v.model} ${v.version} ${v.engine_code || ""} (${v.sold_from_year || "?"}-${v.sold_until_year || "?"})`
+                              )
+                              .join(" · ")}
+                          </Typography>
+                        </Paper>
+                      );
+                    })}
+                  </AccordionDetails>
+                </Accordion>
+              )}
+
               {/* Partes compatibles */}
               {vehicleData.compatible_parts &&
                 vehicleData.compatible_parts.length > 0 && (
-                  <Accordion>
+                  <Accordion defaultExpanded>
                     <AccordionSummary expandIcon={<ExpandMore />}>
                       <Typography variant="subtitle1">
                         Partes Compatibles (
@@ -895,42 +1069,166 @@ const PromotiveAPI = () => {
                       </Typography>
                     </AccordionSummary>
                     <AccordionDetails>
-                      <TableContainer component={Paper} elevation={0}>
-                        <Table size="small">
+                      {vehicleData.compatible_parts.some(
+                        (p) => p.matched_by === "engine_family"
+                      ) && (
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                          Algunas piezas vienen de vehículos que comparten la
+                          misma familia de motor y solo se incluyen si
+                          comparten al menos un código OEM (9 caracteres) con
+                          una parte exacta del mismo producto. Verificá la
+                          aplicación antes de vender.
+                        </Alert>
+                      )}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          mb: 2,
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<ContentCopy />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyPartCodes();
+                          }}
+                        >
+                          {partsCopied ? "Códigos copiados ✓" : "Copiar códigos"}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<FileDownload />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportPartsCsv();
+                          }}
+                        >
+                          Exportar CSV
+                        </Button>
+                      </Box>
+                      <TableContainer
+                        component={Paper}
+                        elevation={0}
+                        sx={{ maxHeight: 480 }}
+                      >
+                        <Table size="small" stickyHeader>
                           <TableHead>
                             <TableRow>
                               <TableCell>Categoría</TableCell>
                               <TableCell>Producto</TableCell>
                               <TableCell>Marca</TableCell>
                               <TableCell>Código</TableCell>
+                              <TableCell>Origen</TableCell>
+                              <TableCell>¿En Boxer?</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {vehicleData.compatible_parts
-                              .slice(0, 10)
-                              .map((part, index) => (
-                                <TableRow key={index}>
-                                  <TableCell>
-                                    {part.category || "N/A"}
-                                  </TableCell>
+                            {vehicleData.compatible_parts.map((part, index) => {
+                              const check = catalogChecks[index];
+                              return (
+                                <React.Fragment key={index}>
+                                <TableRow>
+                                  <TableCell>{part.category || "N/A"}</TableCell>
                                   <TableCell>{part.product || "N/A"}</TableCell>
                                   <TableCell>{part.brand || "N/A"}</TableCell>
-                                  <TableCell>{part.code || "N/A"}</TableCell>
+                                  <TableCell sx={{ fontFamily: "monospace" }}>
+                                    {part.code || "N/A"}
+                                  </TableCell>
+                                  <TableCell>
+                                    {part.is_cross_reference ? (
+                                      <Chip
+                                        size="small"
+                                        label={part.oem ? "OEM" : "Equivalente"}
+                                        color={part.oem ? "primary" : "default"}
+                                        variant="outlined"
+                                      />
+                                    ) : (
+                                      <Chip size="small" label="Catálogo" variant="outlined" />
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {!check && (
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<Search fontSize="small" />}
+                                        onClick={() =>
+                                          checkPartInCatalog(index, part.code, part.brand)
+                                        }
+                                      >
+                                        Buscar en Boxer
+                                      </Button>
+                                    )}
+                                    {check?.status === "loading" && (
+                                      <CircularProgress size={18} />
+                                    )}
+                                    {check?.status === "found" && (
+                                      <Chip
+                                        size="small"
+                                        icon={<CheckCircle />}
+                                        label={`En Boxer (${check.matches.length})`}
+                                        color="success"
+                                      />
+                                    )}
+                                    {check?.status === "not_found" && (
+                                      <Chip
+                                        size="small"
+                                        icon={<Error />}
+                                        label="No está en catálogo"
+                                        color="warning"
+                                        variant="outlined"
+                                      />
+                                    )}
+                                    {check?.status === "error" && (
+                                      <Chip size="small" label="Error al buscar" color="error" variant="outlined" />
+                                    )}
+                                  </TableCell>
                                 </TableRow>
-                              ))}
+                                {check?.status === "found" && check.matches.map((m, mi) => {
+                                  const campos = [
+                                    ["Artículo", m.name],
+                                    ["Código", m.internal_code],
+                                    ["Original", m.original_code],
+                                    ["Auxiliar", m.supplier_code],
+                                    ["Marca", m.brand],
+                                    ["Proveedor", m.proveedor],
+                                    ["Rubro", m.rubro],
+                                    ["Subrubro", m.subrubro],
+                                    ["Stock", m.stock],
+                                    ["Venta", m.price != null ? `$${Number(m.price).toLocaleString("es-AR")}` : null],
+                                    ["Lista", m.price_list ? `$${Number(m.price_list).toLocaleString("es-AR")}` : null],
+                                    ["Costo", m.price_cost ? `$${Number(m.price_cost).toLocaleString("es-AR")}` : null],
+                                    ["IVA", m.iva != null ? `${m.iva}%` : null],
+                                    ["Últ. venta", m.fecha_ultima_venta],
+                                    ["Últ. compra", m.fecha_ultima_compra],
+                                    ["Ubicación", m.location],
+                                  ].filter(([, v]) => v !== null && v !== undefined && v !== "" && v !== "—");
+                                  return (
+                                    <TableRow key={`boxer-${index}-${mi}`} sx={{ bgcolor: "#e8f5e9" }}>
+                                      <TableCell colSpan={6} sx={{ py: 1, borderLeft: "4px solid #2e7d32" }}>
+                                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "baseline" }}>
+                                          <Chip size="small" color="success" icon={<CheckCircle />} label={m.propio ? "En Boxer (propio)" : "En Boxer (catálogo proveedor)"} />
+                                          {campos.map(([k, v]) => (
+                                            <Typography key={k} variant="body2">
+                                              <b>{k}:</b> {String(v)}
+                                            </Typography>
+                                          ))}
+                                        </Box>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                                </React.Fragment>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </TableContainer>
-                      {vehicleData.compatible_parts.length > 10 && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ mt: 1 }}
-                        >
-                          Mostrando 10 de {vehicleData.compatible_parts.length}{" "}
-                          partes
-                        </Typography>
-                      )}
                     </AccordionDetails>
                   </Accordion>
                 )}

@@ -97,7 +97,7 @@ const SearchResults = ({ onProductSelect, cartItemsCount }) => {
             <CardMedia
               component="img"
               height="80"
-              image={product.image_url ? `http://localhost:8000${product.image_url}` : '/api/placeholder/150/80'}
+              image={product.image_url ? `${product.image_url}` : '/api/placeholder/150/80'}
               alt={product.name}
               sx={{ 
                 objectFit: 'cover',
@@ -193,7 +193,7 @@ const SearchResults = ({ onProductSelect, cartItemsCount }) => {
         >
           {/* Imagen */}
           <Avatar
-            src={product.image_url ? `http://localhost:8000${product.image_url}` : '/api/placeholder/50/50'}
+            src={product.image_url ? `${product.image_url}` : '/api/placeholder/50/50'}
             alt={product.name}
             sx={{ width: 50, height: 50, flexShrink: 0 }}
           />

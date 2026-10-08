@@ -1,7 +1,0 @@
-{
-    "access_token": "60808f197e2e4ec7ae8a63e1c5fc908e1267bbcb",
-    "token_type": "bearer",
-    "scope": "read_content,write_content,read_products,write_products,read_coupons,write_coupons,read_customers,write_customers,read_orders,write_orders,write_shipping,read_discounts,write_discounts,read_draft_orders,write_draft_orders,write_scripts,read_locations,write_locations,read_fulfillment_orders,write_fulfillment_orders,read_domains,write_domains,read_email_templates,write_email_templates,read_logistic,write_logistic",
-    "user_id": 6256320,
-    "obtained_at": "2025-05-20T19:44:38.260760"
-}

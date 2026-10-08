@@ -19,7 +19,6 @@ from datetime import datetime, timedelta
 import logging
 from logger import get_logger
 from knowledge_manager import KnowledgeManager
-import openai
 from fuzzywuzzy import fuzz
 import re
 import ipaddress

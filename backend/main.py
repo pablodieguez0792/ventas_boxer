@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
+from sqlalchemy import or_
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -15,6 +16,8 @@ from rsf_routes import router as rsf_router
 from promotive_routes import router as promotive_router
 from tiendanube_routes import router as tiendanube_router
 from mercadolibre_routes import router as mercadolibre_router
+from boxer_demo_routes import router as boxer_demo_router, get_articulos as get_boxer_articulos
+from autopartes_ar_routes import router as autopartes_ar_router
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
@@ -127,6 +130,8 @@ app.include_router(rsf_router)
 app.include_router(promotive_router)
 app.include_router(tiendanube_router)
 app.include_router(mercadolibre_router)
+app.include_router(boxer_demo_router)
+app.include_router(autopartes_ar_router)
 
 # Dependency to get database session
 def get_db():
@@ -149,6 +154,144 @@ def test_simple(data: dict):
         "message": "Simple test endpoint working",
         "received_data": data
     }
+
+@app.get("/api/products")
+def get_all_products(
+    q: str = Query(default=None),
+    limit: int = Query(default=100),
+    offset: int = Query(default=0),
+    db: Session = Depends(get_db)
+):
+    """List all products with optional text search and pagination"""
+    query = db.query(Product)
+    if q and len(q.strip()) >= 2:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Product.name.ilike(like),
+                Product.brand.ilike(like),
+                Product.internal_code.ilike(like),
+                Product.original_code.ilike(like),
+                Product.supplier_code.ilike(like),
+                Product.description.ilike(like),
+            )
+        )
+    total = query.count()
+    products = query.order_by(Product.name).offset(offset).limit(limit).all()
+    return {
+        "total": total,
+        "products": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "brand": p.brand,
+                "internal_code": p.internal_code,
+                "original_code": p.original_code or "—",
+                "supplier_code": p.supplier_code or "—",
+                "price": float(p.price),
+                "stock": p.stock,
+                "location": p.location,
+                "image_url": f"/static/images/{p.image_filename}" if p.image_filename else None,
+                "vehicle_application": p.vehicle_application,
+                "description": p.description,
+                "notes": p.notes,
+            }
+            for p in products
+        ]
+    }
+
+def _normalize_code(value: str) -> str:
+    """Deja solo letras/números en mayúscula, para comparar códigos sin
+    importar espacios, guiones o puntos (p. ej. "VKMA 06020 A" vs
+    "VKMA-06020A" deben matchear)."""
+    return "".join(ch for ch in (value or "").upper() if ch.isalnum())
+
+
+@app.get("/api/products/check-code")
+def check_product_code(
+    code: str = Query(...),
+    brand: str = Query(default=None, description="Marca del repuesto, para desambiguar coincidencias"),
+    db: Session = Depends(get_db)
+):
+    """
+    Busca si un código de repuesto (de un catálogo externo, p. ej. Promotive)
+    ya existe en el catálogo propio de Boxer, comparando internal_code,
+    original_code y supplier_code de forma normalizada (ignora espacios,
+    guiones y puntos, y mayúsculas/minúsculas).
+    """
+    target = _normalize_code(code)
+    if not target:
+        return {"found": False, "matches": []}
+
+    products = db.query(Product).all()
+    matches = []
+    for p in products:
+        candidates = [p.internal_code, p.original_code, p.supplier_code]
+        if any(_normalize_code(c or "") == target for c in candidates):
+            matches.append({
+                "id": p.id,
+                "name": p.name,
+                "brand": p.brand,
+                "internal_code": p.internal_code,
+                "original_code": p.original_code or "—",
+                "supplier_code": p.supplier_code or "—",
+                "price": float(p.price),
+                "stock": p.stock,
+                "location": p.location,
+            })
+
+    # Catálogo real de Boxer Gestión (la tabla local "products" es solo de muestra).
+    # cargados=1 trae artículos propios con stock; cargados=0 el catálogo de proveedores.
+    try:
+        seen = set()
+        for cargados in (1, 0):
+            for q in dict.fromkeys([code.strip(), target]):
+                if len(q) < 2:
+                    continue
+                res = get_boxer_articulos(q=q, page=1, proveedor_id="", stock=0, sin_stock=0, cargados=cargados)
+                for a in res.get("articulos", []):
+                    fields = [a["articulo"], a["original"], a["auxiliar"], a["auxiliar2"], a["auxiliar3"]]
+                    if not any(_normalize_code(f) == target for f in fields if f and f != "—"):
+                        continue
+                    key = (a["id"], cargados)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    matches.append({
+                        "id": a["id"],
+                        "source": "boxer",
+                        "propio": bool(cargados),
+                        "name": a["descripcion"],
+                        "brand": a["marca"],
+                        "internal_code": a["articulo"],
+                        "original_code": a["original"],
+                        "supplier_code": a["auxiliar"],
+                        "proveedor": a["proveedor"],
+                        "rubro": a["rubro"],
+                        "subrubro": a["subrubro"],
+                        "price": a["precioVenta"],
+                        "price_list": a["precioLista"],
+                        "price_cost": a["precioCosto"],
+                        "iva": a["iva"],
+                        "stock": a["stock"],
+                        "location": None,
+                        "fecha_ultima_venta": a["fecha_ultima_venta"],
+                        "fecha_ultima_compra": a["fecha_ultima_compra"],
+                        "activo": a["activo"],
+                    })
+            if matches:
+                break
+    except Exception as e:
+        print(f"[check-code] No se pudo consultar Boxer Gestión: {e}")
+
+    if brand and len(matches) > 1:
+        brand_norm = brand.strip().upper()
+        narrowed = [m for m in matches if (m["brand"] or "").strip().upper() == brand_norm]
+        if narrowed:
+            matches = narrowed
+
+    return {"found": len(matches) > 0, "matches": matches}
+
 
 @app.get("/api/products/search")
 def search_products(q: str, limit: int = 20, db: Session = Depends(get_db)):

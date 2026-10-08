@@ -1,4 +1,4 @@
-# Sistema de Gestión de Ventas Multi-Plataforma - Ventas Boxer
+﻿# Sistema de Gestión de Ventas Multi-Plataforma - Ventas Boxer
 # Dependencias del Backend (Python/FastAPI)
 
 # Framework Web y Servidor
@@ -7,7 +7,6 @@ uvicorn[standard]==0.24.0
 
 # Base de Datos y ORM
 sqlalchemy==2.0.23
-sqlite3  # Incluido en Python estándar
 
 # Validación y Serialización
 pydantic==2.5.0
@@ -25,9 +24,6 @@ passlib[bcrypt]==1.7.4
 
 # Utilidades de Fecha y Tiempo
 python-dateutil==2.8.2
-
-# Manejo de CORS para Frontend
-fastapi-cors==0.0.6
 
 # Logging y Debugging
 python-dotenv==1.0.0
@@ -47,5 +43,7 @@ reportlab==4.0.7
 httpx==0.25.2
 requests==2.31.0
 
-# Optional: OpenAI for chatbot intelligence (using legacy v0 API in code)
+# Chatbot (OpenAI)
 openai==0.28.1
+
+

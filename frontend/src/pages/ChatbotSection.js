@@ -90,7 +90,7 @@ export default function ChatbotSection() {
 
   const loadQuestions = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/chatbot/sections');
+      const res = await fetch('/api/chatbot/sections');
       if (res.ok) {
         const data = await res.json();
         const section = data.find(s => s.name === sectionName);
@@ -105,7 +105,7 @@ export default function ChatbotSection() {
 
   const loadConversations = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/chatbot/conversations');
+      const res = await fetch('/api/chatbot/conversations');
       if (res.ok) {
         const data = await res.json();
         setConversations(data);
@@ -118,7 +118,7 @@ export default function ChatbotSection() {
 
   const loadConversation = async (convId) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/chatbot/conversations/${convId}`);
+      const res = await fetch(`/api/chatbot/conversations/${convId}`);
       if (res.ok) {
         const data = await res.json();
         setCurrentConversation(data);
@@ -144,7 +144,7 @@ export default function ChatbotSection() {
   const archiveConversation = async () => {
     if (!selectedConvId) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/chatbot/conversations/${selectedConvId}/archive`, {
+      const res = await fetch(`/api/chatbot/conversations/${selectedConvId}/archive`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -179,7 +179,7 @@ export default function ChatbotSection() {
       };
       setOpenAIRequest(JSON.stringify(payload, null, 2));
       
-      const res = await fetch('http://localhost:8000/api/chatbot/conversation', {
+      const res = await fetch('/api/chatbot/conversation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -233,7 +233,7 @@ export default function ChatbotSection() {
     if (!newQuestion.question.trim() || !newQuestion.answer.trim()) return;
     
     try {
-      const res = await fetch(`http://localhost:8000/api/chatbot/sections/${sectionName}/questions`, {
+      const res = await fetch(`/api/chatbot/sections/${sectionName}/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newQuestion)
@@ -253,7 +253,7 @@ export default function ChatbotSection() {
     if (!questionDialog.question || !newQuestion.question.trim() || !newQuestion.answer.trim()) return;
     
     try {
-      const res = await fetch(`http://localhost:8000/api/chatbot/questions/${questionDialog.question.id}`, {
+      const res = await fetch(`/api/chatbot/questions/${questionDialog.question.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newQuestion)
@@ -273,7 +273,7 @@ export default function ChatbotSection() {
     if (!window.confirm('¿Estás seguro de que quieres eliminar esta pregunta?')) return;
     
     try {
-      const res = await fetch(`http://localhost:8000/api/chatbot/questions/${questionId}`, {
+      const res = await fetch(`/api/chatbot/questions/${questionId}`, {
         method: 'DELETE'
       });
       

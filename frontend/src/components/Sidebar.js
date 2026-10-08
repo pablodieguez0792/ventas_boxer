@@ -15,137 +15,104 @@ import {
   Tooltip,
 } from '@mui/material';
 import {
-  Menu,
-  ChevronLeft,
+  Menu as MenuIcon,
+  ChevronLeft as ChevronLeftIcon,
   ExpandLess,
   ExpandMore,
   PointOfSale,
-  AccountBalanceWallet,
-  Description,
   ShoppingCart,
-  Store,
-  People,
-  SmartToy,
-  Api,
-  Agriculture,
   Business,
-  CloudSync,
 } from '@mui/icons-material';
 
-const DRAWER_WIDTH = 280;
-const DRAWER_WIDTH_COLLAPSED = 64;
+const DRAWER_WIDTH = 240;
+const DRAWER_WIDTH_COLLAPSED = 60;
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(true);
   const [ventasOpen, setVentasOpen] = useState(true);
-  const [mercadoLibreOpen, setMercadoLibreOpen] = useState(false);
-  const [crmOpen, setCrmOpen] = useState(false);
-  const [chatbotOpen, setChatbotOpen] = useState(false);
-  const [conexionesApiOpen, setConexionesApiOpen] = useState(false);
+  const [promotiveOpen, setPromotiveOpen] = useState(true);
 
-  const handleDrawerToggle = () => {
-    setOpen(!open);
-  };
+  const toggleDrawer = () => setOpen(!open);
 
   const ventasItems = [
     { path: '/ventas', label: 'Sistema de Ventas', icon: <PointOfSale /> },
   ];
 
-  const mercadoLibreItems = [
-    { path: '/mercadolibre', label: 'Gestión Integral ML', icon: <Store /> },
-  ];
-
-  const crmItems = [
-    { path: '/crm', label: 'Gestión de Clientes', icon: <People /> },
-  ];
-
-  const chatbotItems = [
-    { path: '/chatbot/original', label: 'CHATBOT ORIGINAL', icon: <SmartToy /> },
-    { path: '/chatbot/modulos', label: 'CHATBOT X MODULOS', icon: <SmartToy /> },
-  ];
-
-  const conexionesApiItems = [
-    { path: '/conexiones-api/rural-santa-fe', label: 'Rural Santa Fe', icon: <Agriculture /> },
+  const promotiveItems = [
+    { path: '/repuestos', label: 'Repuestos por vehículo', icon: <ShoppingCart /> },
     { path: '/conexiones-api/promotive-api', label: 'Promotive - API', icon: <Business /> },
     { path: '/conexiones-api/promotive-articulos', label: 'Artículos', icon: <ShoppingCart /> },
-    { path: '/conexiones-api/tiendanube', label: 'Tienda Nube', icon: <CloudSync /> },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
-  const renderMenuItem = (item, nested = false) => (
-    <ListItem key={item.path} disablePadding sx={{ display: 'block' }}>
-      <Tooltip title={!open ? item.label : ''} placement="right">
-        <ListItemButton
-          onClick={() => navigate(item.path)}
-          sx={{
-            minHeight: 48,
-            justifyContent: open ? 'initial' : 'center',
-            px: nested ? 4 : 2.5,
-            backgroundColor: isActive(item.path) ? 'primary.main' : 'transparent',
-            color: isActive(item.path) ? 'white' : 'inherit',
-            '&:hover': {
-              backgroundColor: isActive(item.path) ? 'primary.dark' : 'action.hover',
-            },
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: 0,
-              mr: open ? 3 : 'auto',
-              justifyContent: 'center',
-              color: isActive(item.path) ? 'white' : 'inherit',
+  const renderMenuItem = (item) => (
+    <ListItem key={item.path} disablePadding>
+      <ListItemButton
+        selected={isActive(item.path)}
+        onClick={() => navigate(item.path)}
+        sx={{
+          mx: 1,
+          borderRadius: 1,
+          justifyContent: open ? 'initial' : 'center',
+          '&.Mui-selected': { bgcolor: '#E3F2FD', '&:hover': { bgcolor: '#BBDEFB' } },
+          '&:hover': { bgcolor: '#F5F5F5' },
+        }}
+      >
+        <ListItemIcon sx={{
+          color: isActive(item.path) ? '#0066CC' : '#757575',
+          minWidth: open ? 40 : 'auto',
+          justifyContent: 'center',
+        }}>
+          {item.icon}
+        </ListItemIcon>
+        {open && (
+          <ListItemText
+            primary={item.label}
+            primaryTypographyProps={{
+              fontWeight: isActive(item.path) ? 600 : 400,
+              color: isActive(item.path) ? '#0066CC' : '#212121',
+              fontSize: '0.875rem',
             }}
-          >
-            {item.icon}
-          </ListItemIcon>
-          <ListItemText 
-            primary={item.label} 
-            sx={{ opacity: open ? 1 : 0 }}
           />
-        </ListItemButton>
-      </Tooltip>
+        )}
+      </ListItemButton>
     </ListItem>
   );
 
-  const renderSection = (title, items, sectionOpen, setSectionOpen, icon) => (
+  const renderSection = (title, items, sectionOpen, setSectionOpen) => (
     <>
-      <ListItem disablePadding sx={{ display: 'block' }}>
+      <ListItem disablePadding>
         <Tooltip title={!open ? title : ''} placement="right">
           <ListItemButton
             onClick={() => open && setSectionOpen(!sectionOpen)}
             sx={{
-              minHeight: 48,
+              mx: 1,
+              borderRadius: 1,
               justifyContent: open ? 'initial' : 'center',
-              px: 2.5,
-              backgroundColor: 'grey.100',
-              '&:hover': {
-                backgroundColor: 'grey.200',
-              },
+              '&:hover': { bgcolor: '#F5F5F5' },
             }}
           >
-            <ListItemIcon
-              sx={{
-                minWidth: 0,
-                mr: open ? 3 : 'auto',
-                justifyContent: 'center',
-              }}
-            >
-              {icon}
-            </ListItemIcon>
-            <ListItemText 
-              primary={title} 
+            <ListItemText
+              primary={title}
               sx={{ opacity: open ? 1 : 0 }}
+              primaryTypographyProps={{
+                fontSize: '0.65rem',
+                fontWeight: 600,
+                color: '#9E9E9E',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
             />
-            {open && (sectionOpen ? <ExpandLess /> : <ExpandMore />)}
+            {open && (sectionOpen ? <ExpandLess sx={{ color: '#9E9E9E', fontSize: 16 }} /> : <ExpandMore sx={{ color: '#9E9E9E', fontSize: 16 }} />)}
           </ListItemButton>
         </Tooltip>
       </ListItem>
-      <Collapse in={open && sectionOpen} timeout="auto" unmountOnExit>
-        <List component="div" disablePadding>
-          {items.map(item => renderMenuItem(item, true))}
+      <Collapse in={open ? sectionOpen : true} timeout="auto" unmountOnExit={false}>
+        <List disablePadding>
+          {items.map(item => renderMenuItem(item))}
         </List>
       </Collapse>
     </>
@@ -157,59 +124,49 @@ const Sidebar = () => {
       sx={{
         width: open ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED,
         flexShrink: 0,
+        transition: 'width 0.3s ease',
         '& .MuiDrawer-paper': {
           width: open ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED,
           boxSizing: 'border-box',
-          transition: 'width 0.3s',
+          bgcolor: '#FAFAFA',
+          borderRight: '1px solid #E0E0E0',
+          transition: 'width 0.3s ease',
           overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         },
       }}
     >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: open ? 'space-between' : 'center',
-          padding: '8px 16px',
-          minHeight: 64,
-          backgroundColor: 'primary.main',
-          color: 'white',
-        }}
-      >
+      <Box sx={{
+        p: open ? 3 : 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: open ? 'space-between' : 'center',
+        minHeight: 64,
+      }}>
         {open && (
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-            🚗 POS Boxer
-          </Typography>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0066CC' }}>
+              BOXER
+            </Typography>
+            <Typography variant="body2" sx={{ fontWeight: 500, color: '#757575' }}>
+              Ventas
+            </Typography>
+          </Box>
         )}
-        <IconButton
-          color="inherit"
-          onClick={handleDrawerToggle}
-          sx={{ color: 'white' }}
-        >
-          {open ? <ChevronLeft /> : <Menu />}
+        <IconButton onClick={toggleDrawer} size="small">
+          {open ? <ChevronLeftIcon /> : <MenuIcon />}
         </IconButton>
       </Box>
-      
+
       <Divider />
-      
-      <List>
-        {renderSection('Ventas', ventasItems, ventasOpen, setVentasOpen, <PointOfSale />)}
-        
-        <Divider sx={{ my: 1 }} />
-        
-        {renderSection('MercadoLibre', mercadoLibreItems, mercadoLibreOpen, setMercadoLibreOpen, <Store />)}
-        
-        <Divider sx={{ my: 1 }} />
-        
-        {renderSection('CRM', crmItems, crmOpen, setCrmOpen, <People />)}
 
-        <Divider sx={{ my: 1 }} />
+      <List sx={{ pt: 2, flexGrow: 1 }}>
+        {renderSection('Ventas', ventasItems, ventasOpen, setVentasOpen)}
 
-        {renderSection('CHATBOT', chatbotItems, chatbotOpen, setChatbotOpen, <SmartToy />)}
+        <Divider sx={{ mx: 2, my: 1 }} />
 
-        <Divider sx={{ my: 1 }} />
-
-        {renderSection('CONEXIONES API', conexionesApiItems, conexionesApiOpen, setConexionesApiOpen, <Api />)}
+        {renderSection('Promotive', promotiveItems, promotiveOpen, setPromotiveOpen)}
       </List>
     </Drawer>
   );

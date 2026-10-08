@@ -192,7 +192,7 @@ const CartSidebar = ({
                 {/* Product Image */}
                 {item.image_url && (
                   <Avatar
-                    src={`http://localhost:8000${item.image_url}`}
+                    src={`${item.image_url}`}
                     alt={item.name}
                     variant="rounded"
                     sx={{ width: 40, height: 40, flexShrink: 0 }}

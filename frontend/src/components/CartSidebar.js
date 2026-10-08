@@ -211,7 +211,7 @@ const CartSidebar = ({ open, onClose }) => {
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 0.75, minHeight: 48 }}>
                   {/* Product Image */}
                   <Avatar
-                    src={item.image_url ? `http://localhost:8000${item.image_url}` : '/api/placeholder/32/32'}
+                    src={item.image_url ? `${item.image_url}` : '/api/placeholder/32/32'}
                     alt={item.name}
                     sx={{ width: 32, height: 32, flexShrink: 0, mt: 0.25 }}
                   />

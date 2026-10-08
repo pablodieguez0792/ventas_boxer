@@ -79,12 +79,12 @@ export default function ChatbotSections() {
   const initializeSections = async () => {
     try {
       // Initialize sections in the database
-      await fetch('http://localhost:8000/api/chatbot/sections/initialize', {
+      await fetch('/api/chatbot/sections/initialize', {
         method: 'POST'
       });
       
       // Load sections data
-      const response = await fetch('http://localhost:8000/api/chatbot/sections');
+      const response = await fetch('/api/chatbot/sections');
       if (response.ok) {
         const data = await response.json();
         setSectionsData(data);

@@ -1,9 +1,12 @@
 import axios from 'axios';
 
-// API base URL - try multiple endpoints for reliability
+// API base URL
+// - Dev/Tunnel: empty string → CRA proxy forwards to localhost:8000
+// - Vercel prod: REACT_APP_API_URL env var → backend via tunnel
+const API_BASE = process.env.REACT_APP_API_URL || '';
 const API_BASE_URLS = [
-  'http://localhost:8000',
-  'http://127.0.0.1:8000'
+  API_BASE,
+  'http://localhost:8000'    // direct fallback for local dev
 ];
 
 // Create axios instance with retry logic
@@ -54,6 +57,116 @@ const api = createApiClient();
 
 // API methods with error handling
 const apiService = {
+  // ── Boxer Demo API (proxy via backend) ──────────────────────────────
+  // Proveedores desde demo.boxergestion.com
+  getBoxerProveedores: async (q = '', page = 1) => {
+    try {
+      const response = await api.get(`${API_BASE_URLS[0]}/api/boxer-demo/proveedores`, {
+        params: { q, page },
+        timeout: 30000,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Boxer proveedores:', error);
+      throw error;
+    }
+  },
+
+  // ── Promotive / SpecParts ─────────────────────────────────────────
+  getPromotiveStatus: async () => {
+    try {
+      const response = await api.get(`${API_BASE_URLS[0]}/api/promotive/status`, { timeout: 10000 });
+      return response.data;
+    } catch (error) {
+      return { connected: false, token_valid: false };
+    }
+  },
+
+  connectPromotive: async () => {
+    try {
+      const response = await api.post(`${API_BASE_URLS[0]}/api/promotive/login`, {
+        client_id: "",
+        client_secret: "",
+      }, { timeout: 30000 });
+      return response.data;
+    } catch (error) {
+      console.error('Error connecting Promotive:', error);
+      throw error;
+    }
+  },
+
+  searchPromotiveParts: async (search, page = 1, limit = 20) => {
+    try {
+      const response = await api.get(`${API_BASE_URLS[0]}/api/promotive/search/parts`, {
+        params: { search: search.trim(), page, limit },
+        timeout: 30000,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error searching Promotive parts:', error);
+      throw error;
+    }
+  },
+  // ── Autopartes AR (147.79.81.127:3080) ───────────────────────────────
+  getAutpartesARStatus: async () => {
+    try {
+      const response = await api.get(`${API_BASE_URLS[0]}/api/autopartes-ar/status`, { timeout: 10000 });
+      return response.data;
+    } catch (error) {
+      return { connected: false, token_valid: false };
+    }
+  },
+
+  loginAutpartesAR: async (username, password) => {
+    const response = await api.post(`${API_BASE_URLS[0]}/api/autopartes-ar/login`, { username, password }, { timeout: 20000 });
+    return response.data;
+  },
+
+  searchAutpartesAR: async (q, limit = 20, offset = 0) => {
+    const response = await api.get(`${API_BASE_URLS[0]}/api/autopartes-ar/search`, {
+      params: { q: q.trim(), limit, offset },
+      timeout: 45000,
+    });
+    return response.data;
+  },
+
+  getAutpartesARDetail: async (id) => {
+    const response = await api.get(`${API_BASE_URLS[0]}/api/autopartes-ar/detail/${id}`, {
+      timeout: 45000,
+    });
+    return response.data;
+  },
+  // ─────────────────────────────────────────────────────────────────────
+
+  // Artículos desde demo.boxergestion.com
+  getBoxerArticulos: async (q = '', page = 1, proveedorId = '', stock = 0) => {
+    if (!q || q.trim().length < 2) return { articulos: [], total: 0, num_pages: 1, page: 1 };
+    try {
+      const response = await api.get(`${API_BASE_URLS[0]}/api/boxer-demo/articulos`, {
+        params: { q: q.trim(), page, proveedor_id: proveedorId, stock },
+        timeout: 30000,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Boxer articulos:', error);
+      throw error;
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────
+
+  // Get all products (with optional search and pagination)
+  getAllProducts: async (q = null, limit = 100, offset = 0) => {
+    try {
+      const params = { limit, offset };
+      if (q) params.q = q;
+      const response = await api.get(`${API_BASE_URLS[0]}/api/products`, { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      throw error;
+    }
+  },
+
   // Product search
   searchProducts: async (query, limit = 10) => {
     try {

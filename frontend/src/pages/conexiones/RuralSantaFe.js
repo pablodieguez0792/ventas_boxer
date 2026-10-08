@@ -332,7 +332,7 @@ const RuralSantaFe = () => {
   const loadOrders = async () => {
     setLoadingOrders(true);
     try {
-      const response = await fetch('http://localhost:8000/api/rsf/orders-history');
+      const response = await fetch('/api/rsf/orders-history');
       const data = await response.json();
       if (data.success) {
         setOrders(data.data);
@@ -415,7 +415,7 @@ const RuralSantaFe = () => {
         }))
       };
 
-      const response = await fetch('http://localhost:8000/api/rsf/orders', {
+      const response = await fetch('/api/rsf/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

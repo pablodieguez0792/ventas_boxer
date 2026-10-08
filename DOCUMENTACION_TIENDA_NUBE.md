@@ -36,7 +36,7 @@ Esta integración permite conectar el sistema Ventas Boxer con la plataforma de 
 ```json
 {
   "client_id": "17976",
-  "client_secret": "ab343a09e2cad932691360cb736b75bc777649e6fc0d3ab0",
+  "client_secret": "<CLIENT_SECRET>",
   "store_id": "6256320",
   "redirect_uri": "http://localhost:5000/callback"
 }
@@ -142,7 +142,7 @@ frontend/src/pages/conexiones/
    ↓
 6. Tienda Nube responde con token
    Response: {
-     "access_token": "60808f197e2e4ec7ae8a63e1c5fc908e1267bbcb",
+     "access_token": "<ACCESS_TOKEN>",
      "token_type": "bearer",
      "scope": "read_products,write_products,...",
      "user_id": 6256320
@@ -199,7 +199,7 @@ def exchange_code_for_token(self, code):
 **Archivo: tiendanube_token.json**
 ```json
 {
-    "access_token": "60808f197e2e4ec7ae8a63e1c5fc908e1267bbcb",
+    "access_token": "<ACCESS_TOKEN>",
     "token_type": "bearer",
     "scope": "read_content,write_content,read_products,write_products,...",
     "user_id": 6256320,
@@ -224,7 +224,7 @@ TOKEN_FILE = "tiendanube_token.json"
 
 TIENDANUBE_CONFIG = {
     "client_id": "17976",
-    "client_secret": "ab343a09e2cad932691360cb736b75bc777649e6fc0d3ab0",
+    "client_secret": "<CLIENT_SECRET>",
     "store_id": "6256320",
     "redirect_uri": "http://localhost:5000/callback",
     "scopes": [...]

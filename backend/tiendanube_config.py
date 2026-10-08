@@ -3,6 +3,9 @@ Configuración para la integración con Tienda Nube.
 """
 
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 import json
 from datetime import datetime
 
@@ -18,7 +21,7 @@ TOKEN_URL = "https://www.tiendanube.com/apps/authorize/token"
 # Configuración de la aplicación (desde variables de entorno o valores por defecto)
 TIENDANUBE_CONFIG = {
     "client_id": os.getenv("TIENDANUBE_CLIENT_ID", "17976"),
-    "client_secret": os.getenv("TIENDANUBE_CLIENT_SECRET", "ab343a09e2cad932691360cb736b75bc777649e6fc0d3ab0"),
+    "client_secret": os.getenv("TIENDANUBE_CLIENT_SECRET", ""),
     "store_id": os.getenv("TIENDANUBE_STORE_ID", "6256320"),
     "redirect_uri": os.getenv("TIENDANUBE_REDIRECT_URI", "http://localhost:5000/callback"),
     "scopes": [

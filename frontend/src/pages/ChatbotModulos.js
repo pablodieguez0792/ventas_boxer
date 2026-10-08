@@ -75,7 +75,7 @@ export default function ChatbotModulos() {
 
   const loadSections = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/chatbot/sections');
+      const response = await fetch('/api/chatbot/sections');
       if (response.ok) {
         const data = await response.json();
         setSectionsData(data);

@@ -45,3 +45,14 @@ build/
 *.whl
 pos_autopartes.db
 frontend/package-lock.json
+
+# Caché local de referencias cruzadas de Promotive/SpecParts (se regenera solo)
+backend/promotive_cross_cache.json
+
+# Datos y secretos locales (no subir)
+*.db
+*_token.json
+specparts_part_dataset.csv
+specparts_part_dataset.json
+/ventas_boxer/
+backend/promotive_cross_cache.json

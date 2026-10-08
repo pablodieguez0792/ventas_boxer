@@ -40,7 +40,7 @@ export default function ChatbotContainer() {
 
   const loadConversations = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/chatbot/conversations');
+      const res = await fetch('/api/chatbot/conversations');
       if (res.ok) {
         const data = await res.json();
         setConversations(data);
@@ -53,7 +53,7 @@ export default function ChatbotContainer() {
 
   const loadConversation = async (convId) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/chatbot/conversations/${convId}`);
+      const res = await fetch(`/api/chatbot/conversations/${convId}`);
       if (res.ok) {
         const data = await res.json();
         setCurrentConversation(data);
@@ -79,7 +79,7 @@ export default function ChatbotContainer() {
   const archiveConversation = async () => {
     if (!selectedConvId) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/chatbot/conversations/${selectedConvId}/archive`, {
+      const res = await fetch(`/api/chatbot/conversations/${selectedConvId}/archive`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -115,7 +115,7 @@ export default function ChatbotContainer() {
       };
       setOpenAIRequest(JSON.stringify(payload, null, 2));
       
-      const res = await fetch('http://localhost:8000/api/chatbot/conversation', {
+      const res = await fetch('/api/chatbot/conversation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

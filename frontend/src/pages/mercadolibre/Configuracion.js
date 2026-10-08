@@ -155,7 +155,7 @@ const Configuracion = () => {
   // Load configurations from database
   const loadConfigurations = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/configurations');
+      const response = await fetch('/api/configurations');
       if (response.ok) {
         const configs = await response.json();
         console.log('Loaded configurations:', configs);
@@ -201,7 +201,7 @@ const Configuracion = () => {
         mlFixedCosts
       };
       
-      const response = await fetch('http://localhost:8000/api/configurations', {
+      const response = await fetch('/api/configurations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

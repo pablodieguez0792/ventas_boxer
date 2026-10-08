@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicio para integración con API de Promotive/SpecParts
 Permite consultar vehículos por patente/VIN y obtener información técnica completa
 """
@@ -14,6 +14,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Caché en disco para /single-part/{id}: la API de SpecParts cobra por cupo
+# mensual (requests.left en la respuesta), así que evitamos repetir la misma
+# consulta de referencias cruzadas cada vez que alguien busca el mismo vehículo.
+CROSS_CACHE_FILE = os.path.join(os.path.dirname(__file__), "promotive_cross_cache.json")
+CROSS_CACHE_TTL_DAYS = 14
 
 class PromotiveAPIService:
     def __init__(self, client_id: str = None, client_secret: str = None):
@@ -221,7 +227,9 @@ class PromotiveAPIService:
         try:
             params = {
                 "lang": 1,  # Español
-                "vehicle_id[]": vehicle_id,
+                # OJO: la API ignora silenciosamente "vehicle_id[]" y devuelve el
+                # catalogo completo. El nombre correcto del filtro es "vehicle_id".
+                "vehicle_id": vehicle_id,
                 "page": page,
                 "limit": min(limit, 100)
             }
@@ -256,7 +264,121 @@ class PromotiveAPIService:
         except requests.exceptions.RequestException as e:
             logger.error(f"Error consultando partes: {e}")
             raise Exception(f"Error en consulta de partes: {str(e)}")
-    
+
+    async def get_vehicle_ids_by_engine_family(self, engine_family: str) -> List[int]:
+        """
+        Devuelve los vehicle_id de TODOS los vehículos (cualquier modelo) que
+        comparten una familia de motor (p. ej. "EA211": usado por VW Golf,
+        Polo, T-Cross, Virtus, Audi A1, Seat Ibiza, etc.).
+
+        A diferencia de "code"/"id", el filtro "engine_family" en /vehicle/list
+        sí funciona: agrupa por mercado y devuelve "vehicle_ids" (lista plana).
+        Se usa como fallback cuando el vehicle_id exacto de la patente no tiene
+        partes cargadas, para buscar piezas de motor en vehículos hermanos que
+        usan el mismo motor.
+        """
+        if not engine_family:
+            return []
+        if not await self._ensure_authenticated():
+            raise Exception("No se pudo autenticar con SpecParts API")
+
+        try:
+            response = requests.get(
+                f"{self.base_url}/vehicle/list",
+                params={"lang": 1, "engine_family": engine_family, "limit": 10},
+                headers=self._get_headers(),
+                timeout=30
+            )
+            if response.status_code in [401, 403]:
+                if await self.authenticate():
+                    response = requests.get(
+                        f"{self.base_url}/vehicle/list",
+                        params={"lang": 1, "engine_family": engine_family, "limit": 10},
+                        headers=self._get_headers(),
+                        timeout=30
+                    )
+                else:
+                    raise Exception("Error de autenticación")
+            response.raise_for_status()
+            data = response.json().get("data", []) or []
+            ids: List[int] = []
+            for group in data:
+                ids.extend(group.get("vehicle_ids") or [])
+            return ids
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"No se pudo obtener vehículos por familia de motor {engine_family}: {e}")
+            return []
+
+    @staticmethod
+    def _load_cross_cache() -> Dict[str, Any]:
+        try:
+            if os.path.exists(CROSS_CACHE_FILE):
+                with open(CROSS_CACHE_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception as e:
+            logger.warning(f"No se pudo leer el caché de cross-references: {e}")
+        return {}
+
+    @staticmethod
+    def _save_cross_cache(cache: Dict[str, Any]) -> None:
+        try:
+            with open(CROSS_CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(cache, f, ensure_ascii=False)
+        except Exception as e:
+            logger.warning(f"No se pudo guardar el caché de cross-references: {e}")
+
+    async def get_part_detail(self, part_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Ficha completa de una parte vía /single-part/{id} (atributos, fotos,
+        cruces, vehículos compatibles, EAN, links, componentes, etc.).
+        Cacheada en disco CROSS_CACHE_TTL_DAYS días porque consume cupo mensual.
+        """
+        cache = self._load_cross_cache()
+        key = f"detail:{part_id}"
+        cached = cache.get(key)
+        if cached:
+            fetched_at = datetime.fromisoformat(cached["fetched_at"])
+            if datetime.now() - fetched_at < timedelta(days=CROSS_CACHE_TTL_DAYS):
+                return cached["detail"]
+
+        if not await self._ensure_authenticated():
+            raise Exception("No se pudo autenticar con SpecParts API")
+
+        try:
+            def _get():
+                return requests.get(
+                    f"{self.base_url}/single-part/{part_id}",
+                    params={"output": "v1"},
+                    headers=self._get_headers(),
+                    timeout=30
+                )
+            response = _get()
+            if response.status_code in [401, 403]:
+                if await self.authenticate():
+                    response = _get()
+                else:
+                    raise Exception("Error de autenticación")
+
+            if response.status_code == 404:
+                detail = None
+            else:
+                response.raise_for_status()
+                detail = response.json()
+                if isinstance(detail, list):
+                    detail = detail[0] if detail else None
+
+            cache[key] = {"fetched_at": datetime.now().isoformat(), "detail": detail}
+            self._save_cross_cache(cache)
+            return detail
+
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"No se pudo obtener el detalle de la parte {part_id}: {e}")
+            return None
+
+    async def get_part_cross_references(self, part_id: int) -> List[Dict[str, Any]]:
+        """Referencias cruzadas (campo "cross") de /single-part/{id}."""
+        detail = await self.get_part_detail(part_id)
+        return (detail or {}).get("cross", []) or []
     def get_connection_status(self) -> Dict[str, Any]:
         """Obtiene el estado de la conexión"""
         return {
