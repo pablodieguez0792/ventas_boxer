@@ -556,7 +556,7 @@ const PromotiveArticulos = () => {
         <Divider />
         <DialogContent sx={{ pt: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField label="URL del servidor (opcional)" size="small" value={boxerUrl} onChange={e => setBoxerUrl(e.target.value)}
+            <TextField label="Subdominio de Boxer (ej. miempresa) - vacío = cuenta actual" size="small" value={boxerUrl} onChange={e => setBoxerUrl(e.target.value)}
               placeholder="https://tu-boxer.com" helperText="Dejar vacío para usar el demo" />
             <TextField label="Usuario" size="small" value={boxerUser} onChange={e => setBoxerUser(e.target.value)} />
             <TextField label="Contraseña" size="small" type="password" value={boxerPass} onChange={e => setBoxerPass(e.target.value)}

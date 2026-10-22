@@ -5,10 +5,17 @@ Token: se lee de BOXER_DEMO_TOKEN (.env)
 """
 from fastapi import APIRouter, Query, HTTPException
 import os
+import re
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# BOXER_VERIFY_SSL=false saltea la verificación del certificado de Boxer (útil si vence).
+VERIFY_SSL = os.getenv("BOXER_VERIFY_SSL", "true").strip().lower() not in ("0", "false", "no")
+if not VERIFY_SSL:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 router = APIRouter()
 
@@ -67,37 +74,46 @@ def boxer_status():
 
 @router.post("/api/boxer-demo/login")
 def boxer_login(body: BoxerLoginRequest):
-    """Login con credenciales propias de Boxer. Obtiene token DRF."""
-    base = body.url.rstrip("/") if body.url else _boxer_state["base_url"]
-    # Intentar endpoint estándar DRF
-    for auth_path in ["/api-token-auth/", "/api/auth/token/", "/api/login/"]:
-        try:
-            r = requests.post(
-                f"{base}{auth_path}",
-                json={"username": body.username, "password": body.password},
-                timeout=15,
-            )
-            if r.status_code == 200:
-                data = r.json()
-                token = data.get("token") or data.get("access_token") or data.get("key")
-                if token:
-                    _boxer_state["base_url"] = base
-                    _boxer_state["token"] = token
-                    _boxer_state["username"] = body.username
-                    _boxer_state["connected"] = True
-                    _cache.clear()  # limpiar caché con token viejo
-                    return {"success": True, "message": f"Conectado a Boxer como {body.username}"}
-        except Exception:
-            continue
-    raise HTTPException(status_code=401, detail="No se pudo autenticar con Boxer. Verificá la URL y credenciales.")
-
+    """Login contra Boxer Gestión (POST /api/usuario/login/). Acepta como "url" el
+    subdominio (ej. "miempresa") o la URL completa (https://miempresa.boxergestion.com);
+    si viene vacío usa la cuenta actual."""
+    raw = (body.url or "").strip()
+    if raw:
+        sub = re.sub(r"/.*$", "", re.sub(r"\.boxergestion\.com.*$", "", re.sub(r"^https?://", "", raw.lower())))
+        base = f"https://{sub}.boxergestion.com"
+    else:
+        base = _boxer_state["base_url"]
+    try:
+        r = requests.post(
+            f"{base}/api/usuario/login/",
+            json={"username": body.username, "password": body.password},
+            headers={"Accept": "application/json", "Origin": base, "Referer": f"{base}/"},
+            timeout=15,
+            verify=VERIFY_SSL,
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"No se pudo conectar con {base}: {e}")
+    if r.status_code in (400, 401, 403, 404):
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos para ese subdominio.")
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Boxer respondió {r.status_code} al iniciar sesión.")
+    try:
+        data = r.json()
+    except ValueError:
+        data = None
+    token = data if isinstance(data, str) and len(data) > 20 else (data.get("token") if isinstance(data, dict) else None)
+    if not token:
+        raise HTTPException(status_code=502, detail="Boxer no devolvió un token de sesión.")
+    _boxer_state.update({"base_url": base, "token": token, "username": body.username, "connected": True})
+    _cache.clear()
+    return {"success": True, "message": f"Conectado a Boxer como {body.username}"}
 
 def _get(path: str, params: dict = None):
     """Helper: GET request al demo de Boxer con logging detallado."""
     url = f"{_boxer_state['base_url']}{path}"
     print(f"[BoxerDemo] GET {url} params={params}")
     try:
-        resp = requests.get(url, headers=_headers(), params=params, timeout=TIMEOUT)
+        resp = requests.get(url, headers=_headers(), params=params, timeout=TIMEOUT, verify=VERIFY_SSL)
         print(f"[BoxerDemo] Status {resp.status_code} - {len(resp.content)} bytes")
         if resp.status_code >= 400:
             print(f"[BoxerDemo] Error body: {resp.text[:500]}")
@@ -127,7 +143,7 @@ def debug_boxer(path: str = Query(default="/api/proveedor/lista/")):
     """Devuelve la respuesta cruda de cualquier endpoint de Boxer Demo (para debugging)."""
     url = f"{BOXER_BASE}{path}"
     try:
-        resp = requests.get(url, headers=HEADERS, params={"q": "", "page": 1, "blank": 1}, timeout=TIMEOUT)
+        resp = requests.get(url, headers=HEADERS, params={"q": "", "page": 1, "blank": 1}, timeout=TIMEOUT, verify=VERIFY_SSL)
         return {
             "status_code": resp.status_code,
             "url": url,
